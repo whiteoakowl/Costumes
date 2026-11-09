@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { CalendarHeart, LayoutDashboard, Menu, Settings, Shirt, Sparkles, Theater, Users, Warehouse, X } from 'lucide-react';
+import { CalendarHeart, HandHeart, LayoutDashboard, Menu, Settings, Shirt, Sparkles, Theater, Users, Wand2, Warehouse, X } from 'lucide-react';
 import { useDb } from '../data/store';
 import { countSampleRecords } from '../data/actions';
 
@@ -8,9 +8,11 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/dancers', label: 'Dancers', icon: Users },
   { to: '/costumes', label: 'Costumes', icon: Shirt },
+  { to: '/props', label: 'Props', icon: Wand2 },
   { to: '/shows', label: 'Shows', icon: Theater },
   { to: '/performances', label: 'Performance Planning', icon: CalendarHeart },
   { to: '/storage', label: 'Storage Locations', icon: Warehouse },
+  { to: '/volunteers', label: 'Volunteers', icon: HandHeart },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

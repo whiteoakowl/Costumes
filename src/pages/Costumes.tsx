@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, CheckCircle2, Copy, Download, FolderInput, History, MapPin, Pencil, Plus, Shirt, Tags, Trash2, Wrench } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Copy, Download, FolderInput, History, MapPin, Pencil, Plus, Tags, Trash2, Wrench } from 'lucide-react';
 import { useDb } from '../data/store';
 import { addCostumeNote, deleteCategory, deleteCostumes, duplicateCostume, moveCategory, moveCostumes, saveCategory } from '../data/actions';
-import { accessoriesFor, byId, costumeUsage, formatDate, formatDateTime, sortedCategories } from '../data/selectors';
+import { accessoriesFor, byId, costumeUsage, formatDate, formatDateTime, itemsOf, kindOf, sortedCategories } from '../data/selectors';
 import { Badge, BulkBar, Card, DataTable, EmptyState, Field, PageHeader, SampleTag, SearchInput, SearchSelect, StatusBadge, Tabs, type Column } from '../components/ui';
 import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
@@ -11,12 +11,23 @@ import { MoveCostumesDialog, ReassignDeleteDialog, SetCategoryDialog } from '../
 import { useCategoryOptions, useLocationOptions } from '../components/forms';
 import { Modal } from '../components/Modal';
 import { exportCostumeInventory } from '../lib/export';
-import type { Costume, CostumeCategory, ID, NoteType } from '../data/types';
+import type { Costume, CostumeCategory, ID, ItemKind, NoteType } from '../data/types';
+import { itemLabels } from '../lib/labels';
 
 type View = 'all' | 'category' | 'size' | 'location' | 'ready' | 'in_progress';
 
 export function CostumesPage() {
+  return <InventoryPage kind="costume" />;
+}
+
+export function PropsPage() {
+  return <InventoryPage kind="prop" />;
+}
+
+function InventoryPage({ kind }: { kind: ItemKind }) {
+  const L = itemLabels[kind];
   const db = useDb();
+  const items = itemsOf(db, kind);
   const ed = useEditors();
   const run = useRun();
   const confirm = useConfirm();
@@ -42,9 +53,9 @@ export function CostumesPage() {
   const cats = byId(db.categories);
   const locs = byId(db.storageLocations);
   const categories = sortedCategories(db);
-  const sizes = useMemo(() => [...new Set(db.costumes.map((c) => c.size).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [db]);
+  const sizes = useMemo(() => [...new Set(items.map((c) => c.size).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [db]);
 
-  const rows = db.costumes.filter((c) => {
+  const rows = items.filter((c) => {
     if (view === 'ready' && c.status !== 'ready') return false;
     if (view === 'in_progress' && c.status !== 'in_progress') return false;
     if (categoryFilter === 'none' ? c.categoryId : categoryFilter && c.categoryId !== categoryFilter) return false;
@@ -61,10 +72,10 @@ export function CostumesPage() {
     { key: 'id', header: 'ID', render: (c) => <span className="mono small">{c.inventoryNumber}</span>, sortValue: (c) => c.inventoryNumber },
     {
       key: 'name',
-      header: 'Costume',
+      header: L.One,
       render: (c) => (
         <>
-          <Link to={`/costumes/${c.id}`} className="link-strong">
+          <Link to={`${L.base}/${c.id}`} className="link-strong">
             {c.name}
           </Link>
           <SampleTag show={c.isSample} />
@@ -74,11 +85,11 @@ export function CostumesPage() {
       sortValue: (c) => c.name,
     },
     { key: 'cat', header: 'Category', render: (c) => (c.categoryId ? cats.get(c.categoryId)?.name : <span className="faint">Uncategorized</span>), sortValue: (c) => (c.categoryId ? cats.get(c.categoryId)?.name ?? '' : ''), minor: true },
-    { key: 'size', header: 'Size', render: (c) => c.size || <span className="faint">—</span>, sortValue: (c) => c.size },
+    ...(kind === 'costume' ? [{ key: 'size', header: 'Size', render: (c: Costume) => c.size || <span className="faint">—</span>, sortValue: (c: Costume) => c.size }] : []),
     { key: 'qty', header: 'Qty', render: (c) => c.quantity, sortValue: (c) => c.quantity },
     {
       key: 'acc',
-      header: 'Accessories',
+      header: L.parts,
       render: (c) => {
         const acc = accessoriesFor(db, c.id);
         if (!acc.length) return <span className="faint">—</span>;
@@ -146,31 +157,31 @@ export function CostumesPage() {
     return null;
   }, [view, rows, categories, db.storageLocations, cats, locs]);
 
-  const ids = [...selected].filter((id) => db.costumes.some((c) => c.id === id));
+  const ids = [...selected].filter((id) => items.some((c) => c.id === id));
   const removeSelected = async () => {
     const usage = db.assignments.filter((a) => ids.includes(a.costumeId)).length;
     if (
       await confirm({
-        title: `Delete ${ids.length} costume${ids.length === 1 ? '' : 's'}?`,
-        message: `This permanently deletes the costume record${ids.length === 1 ? '' : 's'}, accessories and notes history.${usage ? ` ${usage} show/performance assignment(s) will also be removed.` : ''}`,
+        title: `Delete ${ids.length} ${ids.length === 1 ? L.one : L.many}?`,
+        message: `This permanently deletes the ${L.one} record${ids.length === 1 ? '' : 's'}, ${L.parts.toLowerCase()} and notes history.${usage ? ` ${usage} show/performance assignment(s) will also be removed.` : ''}`,
         confirmLabel: 'Delete',
         danger: true,
       })
     ) {
-      if (run(() => (deleteCostumes(ids), true), `${ids.length} costume${ids.length === 1 ? '' : 's'} deleted.`)) setSelected(new Set());
+      if (run(() => (deleteCostumes(ids), true), `${ids.length} ${ids.length === 1 ? L.one : L.many} deleted.`)) setSelected(new Set());
     }
   };
 
-  const emptyState = db.costumes.length ? (
-    <EmptyState title="No costumes match" message="Try a different view or clear the filters." />
+  const emptyState = items.length ? (
+    <EmptyState title={`No ${L.many} match`} message="Try a different view or clear the filters." />
   ) : (
     <EmptyState
-      icon={<Shirt size={28} />}
-      title="No costumes yet"
-      message="Add your first costume to start your inventory."
+      icon={<L.Icon size={28} />}
+      title={`No ${L.many} yet`}
+      message={`Add your first ${L.one} to start your inventory.`}
       action={
-        <button className="btn btn-primary" onClick={() => ed.editCostume()}>
-          <Plus size={16} /> Add costume
+        <button className="btn btn-primary" onClick={() => ed.editCostume(undefined, { defaults: { kind } })}>
+          <Plus size={16} /> Add {L.one}
         </button>
       }
     />
@@ -181,18 +192,18 @@ export function CostumesPage() {
   return (
     <>
       <PageHeader
-        title="Costumes"
-        subtitle={`${db.costumes.length} costume${db.costumes.length === 1 ? '' : 's'} · ${db.costumes.filter((c) => c.status === 'ready').length} ready · ${db.costumes.filter((c) => c.status === 'in_progress').length} in progress`}
+        title={L.Many}
+        subtitle={`${items.length} ${items.length === 1 ? L.one : L.many} · ${items.filter((c) => c.status === 'ready').length} ready · ${items.filter((c) => c.status === 'in_progress').length} in progress`}
         actions={
           <>
             <button className="btn btn-ghost" onClick={() => setCatsOpen(true)}>
               <Tags size={16} /> Categories
             </button>
-            <button className="btn btn-ghost" onClick={() => exportCostumeInventory(db)} disabled={!db.costumes.length}>
+            <button className="btn btn-ghost" onClick={() => exportCostumeInventory(db, undefined, kind)} disabled={!items.length}>
               <Download size={16} /> Export CSV
             </button>
-            <button className="btn btn-primary" onClick={() => ed.editCostume(undefined, { defaults: { categoryId: categoryFilter && categoryFilter !== 'none' ? categoryFilter : null, storageLocationId: locationFilter && locationFilter !== 'none' ? locationFilter : null } })}>
-              <Plus size={16} /> Add costume
+            <button className="btn btn-primary" onClick={() => ed.editCostume(undefined, { defaults: { kind, categoryId: categoryFilter && categoryFilter !== 'none' ? categoryFilter : null, storageLocationId: locationFilter && locationFilter !== 'none' ? locationFilter : null } })}>
+              <Plus size={16} /> Add {L.one}
             </button>
           </>
         }
@@ -204,7 +215,7 @@ export function CostumesPage() {
         </button>
         {categories.map((c) => (
           <button key={c.id} className={`chip chip-btn ${categoryFilter === c.id ? 'on' : ''}`} onClick={() => setParam('category', categoryFilter === c.id ? '' : c.id)}>
-            {c.name} <span className="faint">{db.costumes.filter((x) => x.categoryId === c.id).length}</span>
+            {c.name} <span className="faint">{items.filter((x) => x.categoryId === c.id).length}</span>
           </button>
         ))}
       </div>
@@ -214,12 +225,12 @@ export function CostumesPage() {
           value={view}
           onChange={(v) => setParam('view', v === 'all' ? '' : v)}
           tabs={[
-            { value: 'all', label: 'All costumes', count: db.costumes.length },
+            { value: 'all', label: `All ${L.many}`, count: items.length },
             { value: 'category', label: 'By show type' },
-            { value: 'size', label: 'By size' },
+            ...(kind === 'costume' ? [{ value: 'size' as View, label: 'By size' }] : []),
             { value: 'location', label: 'By storage' },
-            { value: 'ready', label: 'Ready', count: db.costumes.filter((c) => c.status === 'ready').length },
-            { value: 'in_progress', label: 'In progress', count: db.costumes.filter((c) => c.status === 'in_progress').length },
+            { value: 'ready', label: 'Ready', count: items.filter((c) => c.status === 'ready').length },
+            { value: 'in_progress', label: 'In progress', count: items.filter((c) => c.status === 'in_progress').length },
           ]}
         />
         <div className="toolbar">
@@ -242,12 +253,14 @@ export function CostumesPage() {
             ))}
             <option value="none">Unassigned</option>
           </select>
+          {kind === 'costume' && (
           <select className="input input-auto" value={size} onChange={(e) => setSize(e.target.value)} aria-label="Filter by size">
             <option value="">All sizes</option>
             {sizes.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
+          )}
         </div>
 
         <BulkBar count={ids.length} onClear={() => setSelected(new Set())}>
@@ -263,7 +276,7 @@ export function CostumesPage() {
           <button className="btn btn-ghost btn-sm" onClick={() => setRecat(true)}>
             <FolderInput size={14} /> Change category
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => exportCostumeInventory(db, ids)}>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportCostumeInventory(db, ids, kind)}>
             <Download size={14} /> Export
           </button>
           <button className="btn btn-ghost btn-sm danger" onClick={removeSelected}>
@@ -310,7 +323,7 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
     if (run(() => saveCategory(name), `Category “${name.trim()}” added.`)) setName('');
   };
   return (
-    <Modal open={open} onClose={onClose} title="Costume Categories" subtitle="Show types used to organize costumes and shows" size="md">
+    <Modal open={open} onClose={onClose} title="Costume Categories" subtitle="Show types used to organize costumes, props and shows" size="md">
       <div className="inline-form">
         <input className="input" placeholder="New category, e.g. Contemporary" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} aria-label="New category name" />
         <button className="btn btn-primary" onClick={add}>
@@ -323,6 +336,7 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
         <ul className="cat-list">
           {categories.map((c, i) => {
             const count = db.costumes.filter((x) => x.categoryId === c.id).length;
+            const propCount = db.costumes.filter((x) => x.categoryId === c.id && x.kind === 'prop').length;
             return (
               <li key={c.id}>
                 {editing?.id === c.id ? (
@@ -349,7 +363,10 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
                     {c.name} <SampleTag show={c.isSample} />
                   </span>
                 )}
-                <span className="small faint">{count} costume{count === 1 ? '' : 's'}</span>
+                <span className="small faint">
+                  {count - propCount} costume{count - propCount === 1 ? '' : 's'}
+                  {propCount > 0 && ` · ${propCount} prop${propCount === 1 ? '' : 's'}`}
+                </span>
                 <div className="row-actions">
                   <button className="icon-btn" aria-label="Move up" disabled={i === 0} onClick={() => run(() => moveCategory(c.id, -1))}>
                     <ArrowUp size={15} />
@@ -376,6 +393,7 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
         itemName={deleting?.name ?? ''}
         count={deleting ? db.costumes.filter((c) => c.categoryId === deleting.id).length : 0}
         noun="category"
+        itemNoun="item"
         options={options.filter((o) => o.value !== deleting?.id)}
         noneLabel="Leave uncategorized"
         onConfirm={(target) => !!run(() => (deleteCategory(deleting!.id, target), true), `Category “${deleting!.name}” deleted.`)}
@@ -408,12 +426,13 @@ export function CostumeDetailPage() {
   const [noteType, setNoteType] = useState<NoteType>('general');
   const [noteText, setNoteText] = useState('');
   const c = db.costumes.find((x) => x.id === id);
+  const L = itemLabels[c ? kindOf(c) : 'costume'];
 
   if (!c) {
     return (
       <>
-        <PageHeader title="Costume not found" back={{ to: '/costumes', label: 'Costumes' }} />
-        <EmptyState title="This costume no longer exists" message="It may have been deleted." action={<Link to="/costumes" className="btn btn-primary">Back to costumes</Link>} />
+        <PageHeader title="Item not found" back={{ to: L.base, label: L.Many }} />
+        <EmptyState title="This item no longer exists" message="It may have been deleted." action={<Link to={L.base} className="btn btn-primary">Back to {L.many}</Link>} />
       </>
     );
   }
@@ -427,15 +446,15 @@ export function CostumeDetailPage() {
   };
   const del = async () => {
     const n = db.assignments.filter((a) => a.costumeId === c.id).length;
-    if (await confirm({ title: 'Delete costume?', message: `Permanently delete “${c.name}” (${c.inventoryNumber}) with its accessories and notes history?${n ? ` It will also be removed from ${n} show/performance assignment(s).` : ''}`, confirmLabel: 'Delete costume', danger: true })) {
-      if (run(() => (deleteCostumes([c.id]), true), 'Costume deleted.')) navigate('/costumes');
+    if (await confirm({ title: `Delete ${L.one}?`, message: `Permanently delete “${c.name}” (${c.inventoryNumber}) with its ${L.parts.toLowerCase()} and notes history?${n ? ` It will also be removed from ${n} show/performance assignment(s).` : ''}`, confirmLabel: `Delete ${L.one}`, danger: true })) {
+      if (run(() => (deleteCostumes([c.id]), true), `${L.One} deleted.`)) navigate(L.base);
     }
   };
 
   return (
     <>
       <PageHeader
-        back={{ to: '/costumes', label: 'Costumes' }}
+        back={{ to: L.base, label: L.Many }}
         title={
           <>
             {c.name} <SampleTag show={c.isSample} />
@@ -450,14 +469,14 @@ export function CostumeDetailPage() {
             <button
               className="btn btn-ghost"
               onClick={() => {
-                const newId = run(() => duplicateCostume(c.id), 'Costume duplicated.');
-                if (newId) navigate(`/costumes/${newId}`);
+                const newId = run(() => duplicateCostume(c.id), `${L.One} duplicated.`);
+                if (newId) navigate(`${L.base}/${newId}`);
               }}
             >
               <Copy size={16} /> Duplicate
             </button>
             <button className="btn btn-primary" onClick={() => ed.editCostume(c.id)}>
-              <Pencil size={16} /> Edit costume
+              <Pencil size={16} /> Edit {L.one}
             </button>
           </>
         }
@@ -487,14 +506,18 @@ export function CostumeDetailPage() {
             </div>
           </Card>
 
-          <Card title="Costume Details">
+          <Card title={`${L.One} Details`}>
             <dl className="dl">
-              <dt>Costume ID</dt>
+              <dt>{L.One} ID</dt>
               <dd className="mono">{c.inventoryNumber}</dd>
               <dt>Show type</dt>
-              <dd>{cat ? <Link to={`/costumes?category=${cat.id}`}>{cat.name}</Link> : 'Uncategorized'}</dd>
-              <dt>Size</dt>
-              <dd>{c.size || '—'}</dd>
+              <dd>{cat ? <Link to={`${L.base}?category=${cat.id}`}>{cat.name}</Link> : 'Uncategorized'}</dd>
+              {kindOf(c) === 'costume' && (
+                <>
+                  <dt>Size</dt>
+                  <dd>{c.size || '—'}</dd>
+                </>
+              )}
               <dt>Available quantity</dt>
               <dd>{c.quantity}</dd>
               <dt>Date added</dt>
@@ -507,7 +530,7 @@ export function CostumeDetailPage() {
           </Card>
 
           <Card title="Storage Location" icon={<MapPin size={18} />}>
-            <Field label="Stored in" hint="Changing this moves the costume and logs it in the notes history">
+            <Field label="Stored in" hint={`Changing this moves the ${L.one} and logs it in the notes history`}>
               <SearchSelect ariaLabel="Storage location" value={c.storageLocationId ?? ''} onChange={(v) => run(() => moveCostumes([c.id], v || null), `Moved to ${locations.find((l) => l.value === v)?.label ?? 'Unassigned'}.`)} options={locations} noneLabel="Unassigned" />
             </Field>
             {c.storageLocationId && (
@@ -517,9 +540,9 @@ export function CostumeDetailPage() {
             )}
           </Card>
 
-          <Card title={`Accessories (${acc.length})`} actions={<button className="btn btn-ghost btn-sm" onClick={() => ed.editCostume(c.id)}>Edit</button>}>
+          <Card title={`${L.parts} (${acc.length})`} actions={<button className="btn btn-ghost btn-sm" onClick={() => ed.editCostume(c.id)}>Edit</button>}>
             {!acc.length ? (
-              <p className="faint pad">No accessories recorded.</p>
+              <p className="faint pad">No {L.parts.toLowerCase()} recorded.</p>
             ) : (
               <ul className="mini-list">
                 {acc.map((a) => (
@@ -545,7 +568,7 @@ export function CostumeDetailPage() {
                       </Link>
                       <div className="small faint">{u.ownerType === 'show' ? 'Show' : 'Performance'}</div>
                     </div>
-                    <span className="small">{u.dancers ? `${u.dancers} dancer${u.dancers === 1 ? '' : 's'}` : 'on costume list'}</span>
+                    <span className="small">{u.dancers ? `${u.dancers} assignment${u.dancers === 1 ? '' : 's'}` : `on ${L.one} list`}</span>
                   </li>
                 ))}
               </ul>

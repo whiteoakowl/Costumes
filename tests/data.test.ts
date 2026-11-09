@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getDb, replaceDb, emptyDatabase, ValidationError, STORAGE_KEY } from '../src/data/store';
+import { getDb, replaceDb, emptyDatabase, normalizeDatabase, ValidationError, STORAGE_KEY } from '../src/data/store';
 import * as A from '../src/data/actions';
-import { buildOverview, dancerCostumes, ageFromBirthday } from '../src/data/selectors';
+import { buildOverview, buildPropOverview, dancerCostumes, ageFromBirthday, itemsOf, ownerCostumeIds, availableSlots } from '../src/data/selectors';
 import { buildSampleData } from '../src/data/sample';
 
 const dancer = (firstName: string, extra: Partial<A.DancerInput> = {}) =>
@@ -20,7 +20,9 @@ describe('persistence', () => {
   it('sample data has the requested amounts and is flagged', () => {
     const db = buildSampleData(emptyDatabase());
     expect(db.dancers).toHaveLength(8);
-    expect(db.costumes).toHaveLength(12);
+    expect(itemsOf(db, 'costume')).toHaveLength(12);
+    expect(itemsOf(db, 'prop')).toHaveLength(6);
+    expect(db.volunteers).toHaveLength(4);
     expect(db.categories).toHaveLength(3);
     expect(db.storageLocations).toHaveLength(3);
     expect(db.shows).toHaveLength(2);
@@ -29,7 +31,7 @@ describe('persistence', () => {
     replaceDb(db);
     A.removeSampleData();
     const after = getDb();
-    expect(after.dancers.length + after.costumes.length + after.assignments.length + after.casts.length).toBe(0);
+    expect(after.dancers.length + after.costumes.length + after.assignments.length + after.casts.length + after.volunteers.length).toBe(0);
   });
 });
 
@@ -190,5 +192,102 @@ describe('casts, assignments and readiness', () => {
     A.restoreBackup(snapshot);
     expect(getDb().dancers).toHaveLength(3);
     expect(() => A.restoreBackup({ hello: 'world' })).toThrow(ValidationError);
+  });
+});
+
+describe('props', () => {
+  const prop = (name: string, extra: Partial<A.CostumeInput> = {}) => costume(name, { kind: 'prop', ...extra });
+
+  it('get their own ID sequence and stay out of costume readiness', () => {
+    costume('Tutu');
+    const p = prop('Umbrella', { quantity: 1 });
+    const db = getDb();
+    expect(db.costumes.find((c) => c.id === p)!.inventoryNumber).toBe('PROP-0001');
+    expect(itemsOf(db, 'costume')).toHaveLength(1);
+    expect(itemsOf(db, 'prop')).toHaveLength(1);
+    expect(getDb().costumeNotes.find((n) => n.costumeId === p)!.text).toBe('Prop added to inventory.');
+    const copy = A.duplicateCostume(p);
+    expect(getDb().costumes.find((c) => c.id === copy)!.inventoryNumber).toBe('PROP-0002');
+  });
+
+  it('can be assigned to dancers, whole casts or the show, with warnings', () => {
+    const show = A.saveShow({ name: 'S', categoryId: null, description: '', startDate: '', endDate: '', venue: '', notes: '', status: 'planning' });
+    const cast = A.createCast('show', show, 'Cast A');
+    const ava = dancer('Ava');
+    const lily = dancer('Lily');
+    A.addDancersToCast(cast, [ava, lily]);
+    const umbrella = prop('Umbrella', { quantity: 1, accessories: [{ name: 'Handle', quantity: 0 }] });
+    const chair = prop('Chair');
+    const tutu = costume('Tutu');
+    A.assignCostumes({ ownerType: 'show', ownerId: show, costumeIds: [tutu], castId: cast, dancerIds: [] });
+    A.assignCostumes({ ownerType: 'show', ownerId: show, costumeIds: [umbrella], castId: cast, dancerIds: [] });
+    A.addCostumesToOwner('show', show, [chair]);
+    const { rows, readiness } = buildPropOverview(getDb(), 'show', show);
+    expect(rows.map((r) => r.target).sort()).toEqual(['cast', 'show']);
+    const u = rows.find((r) => r.prop.id === umbrella)!;
+    expect(u.issues).toContain('quantity_short'); // 2 dancers, 1 umbrella
+    expect(u.issues).toContain('missing_part');
+    expect(readiness.total).toBe(2);
+    // Costume readiness ignores props entirely.
+    const costumeView = buildOverview(getDb(), 'show', show);
+    expect(costumeView.rows.every((r) => r.costume?.kind !== 'prop')).toBe(true);
+    expect(costumeView.readiness.totalAssignments).toBe(2);
+    expect(ownerCostumeIds(getDb(), 'show', show, 'prop')).toHaveLength(2);
+    // Dancer profile sees the prop via the whole-cast assignment.
+    expect(dancerCostumes(getDb(), ava).some((e) => e.costume.id === umbrella && e.viaCast)).toBe(true);
+    A.setCostumeStatus([umbrella], 'in_progress', 'repair', 'bent rib');
+    expect(buildPropOverview(getDb(), 'show', show).readiness.needsWork).toBe(1);
+  });
+});
+
+describe('volunteers', () => {
+  const input = (extra: Partial<A.VolunteerInput> = {}): A.VolunteerInput => ({
+    firstName: 'Dana', lastName: 'W', email: 'dana@example.com', phone: '555 201 4410', preferredContact: 'text', skills: ['Sewing', ' Sewing ', 'Hair'], notes: '',
+    availability: [
+      { id: '', type: 'date', date: '2026-12-14', weekday: 0, start: '16:00', end: '22:00', note: '' },
+      { id: '', type: 'weekly', date: '', weekday: 2, start: '', end: '', note: 'Tuesdays' },
+    ],
+    ...extra,
+  });
+
+  it('saves contact, de-duplicated skills and availability', () => {
+    const id = A.saveVolunteer(input());
+    const v = getDb().volunteers.find((x) => x.id === id)!;
+    expect(v.skills).toEqual(['Sewing', 'Hair']);
+    expect(v.availability.every((s) => s.id)).toBe(true);
+    expect(availableSlots(v, '2026-12-14', '19:00')).toHaveLength(1);
+    expect(availableSlots(v, '2026-12-14', '23:00')).toHaveLength(0);
+    expect(availableSlots(v, '2026-12-15')).toHaveLength(1); // a Tuesday, weekly all-day
+    expect(availableSlots(v, '2026-12-16')).toHaveLength(0);
+  });
+
+  it('validates input', () => {
+    expect(() => A.saveVolunteer(input({ firstName: '' }))).toThrow(/First name/);
+    expect(() => A.saveVolunteer(input({ email: 'nope' }))).toThrow(/Email/);
+    expect(() => A.saveVolunteer(input({ availability: [{ id: '', type: 'date', date: '', weekday: 0, start: '', end: '', note: '' }] }))).toThrow(/choose a date/);
+    expect(() => A.saveVolunteer(input({ availability: [{ id: '', type: 'weekly', date: '', weekday: 1, start: '18:00', end: '17:00', note: '' }] }))).toThrow(/after the start/);
+    const id = A.saveVolunteer(input());
+    A.deleteVolunteers([id]);
+    expect(getDb().volunteers).toHaveLength(0);
+  });
+});
+
+describe('upgrade from version 1', () => {
+  it('adds sample props and volunteers next to existing sample data, once', () => {
+    const v1 = buildSampleData(emptyDatabase());
+    v1.costumes = v1.costumes.filter((c) => c.kind !== 'prop');
+    v1.volunteers = [];
+    const raw = JSON.parse(JSON.stringify(v1));
+    raw.meta.schemaVersion = 1;
+    delete raw.volunteers;
+    delete raw.meta.nextPropNumber;
+    delete raw.settings.propIdPrefix;
+    const db = normalizeDatabase(raw);
+    expect(itemsOf(db, 'prop').length).toBe(6);
+    expect(db.volunteers.length).toBe(4);
+    expect(db.settings.propIdPrefix).toBe('PROP');
+    expect(db.assignments.some((a) => itemsOf(db, 'prop').some((p) => p.id === a.costumeId) && a.dancerId)).toBe(true);
+    // Running it again does not duplicate.
+    expect(itemsOf(normalizeDatabase(JSON.parse(JSON.stringify(db))), 'prop').length).toBe(6);
   });
 });

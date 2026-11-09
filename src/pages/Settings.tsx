@@ -5,7 +5,7 @@ import { countSampleRecords, eraseAllData, loadSampleData, removeSampleData, res
 import { Card, Field, PageHeader } from '../components/ui';
 import { useConfirm, useRun, useToast } from '../components/feedback';
 import { CategoryManager } from './Costumes';
-import { exportAllPerformanceAssignments, exportBackup, exportCostumeInventory, exportDancers } from '../lib/export';
+import { exportAllPerformanceAssignments, exportBackup, exportCostumeInventory, exportDancers, exportVolunteers } from '../lib/export';
 import { sortedCategories } from '../data/selectors';
 
 function ListEditor({ label, items, onChange, placeholder }: { label: string; items: string[]; onChange: (next: string[]) => void; placeholder: string }) {
@@ -59,6 +59,7 @@ export function SettingsPage() {
   const confirm = useConfirm();
   const [name, setName] = useState(db.settings.studioName);
   const [prefix, setPrefix] = useState(db.settings.costumeIdPrefix);
+  const [propPrefix, setPropPrefix] = useState(db.settings.propIdPrefix);
   const [catsOpen, setCatsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const samples = countSampleRecords(db);
@@ -96,9 +97,17 @@ export function SettingsPage() {
               </button>
             </div>
           </Field>
+          <Field label="Prop ID prefix" hint={`New props are numbered like ${propPrefix || 'PROP'}-0001.`}>
+            <div className="inline-form">
+              <input className="input" value={propPrefix} onChange={(e) => setPropPrefix(e.target.value.toUpperCase())} maxLength={8} />
+              <button className="btn btn-primary" disabled={propPrefix === db.settings.propIdPrefix} onClick={() => run(() => updateSettings({ propIdPrefix: propPrefix.trim() }), 'Prefix saved.')}>
+                Save
+              </button>
+            </div>
+          </Field>
         </Card>
 
-        <Card title="Costume Categories / Show Types" icon={<Tags size={18} />} actions={<button className="btn btn-primary btn-sm" onClick={() => setCatsOpen(true)}>Manage</button>}>
+        <Card title="Categories / Show Types" icon={<Tags size={18} />} actions={<button className="btn btn-primary btn-sm" onClick={() => setCatsOpen(true)}>Manage</button>}>
           <div className="chips">
             {sortedCategories(db).map((c) => (
               <span key={c.id} className="chip">
@@ -118,17 +127,27 @@ export function SettingsPage() {
           <p className="small faint">Size fields also accept any custom value.</p>
         </Card>
 
+        <Card title="Volunteer Skills">
+          <ListEditor label="Skills offered when adding a volunteer" items={db.settings.skills} onChange={(skills) => run(() => updateSettings({ skills }))} placeholder="e.g. Lighting" />
+        </Card>
+
         <Card title="Export" icon={<Download size={18} />}>
           <p className="small faint">CSV files open directly in Excel, Numbers and Google Sheets.</p>
           <div className="btn-col">
             <button className="btn btn-ghost" onClick={() => exportCostumeInventory(db)}>
               <Download size={16} /> Costume inventory (CSV)
             </button>
+            <button className="btn btn-ghost" onClick={() => exportCostumeInventory(db, undefined, 'prop')}>
+              <Download size={16} /> Prop inventory (CSV)
+            </button>
             <button className="btn btn-ghost" onClick={() => exportAllPerformanceAssignments(db)}>
               <Download size={16} /> Performance assignments (CSV)
             </button>
             <button className="btn btn-ghost" onClick={() => exportDancers(db)}>
               <Download size={16} /> Dancers (CSV)
+            </button>
+            <button className="btn btn-ghost" onClick={() => exportVolunteers(db)}>
+              <Download size={16} /> Volunteers (CSV)
             </button>
           </div>
         </Card>
@@ -167,7 +186,7 @@ export function SettingsPage() {
               <button
                 className="btn btn-danger"
                 onClick={async () => {
-                  if (await confirm({ title: 'Remove sample data?', message: 'All sample dancers, costumes, shows, locations and performance plans will be deleted. Your own records are kept.', confirmLabel: 'Remove sample data', danger: true }))
+                  if (await confirm({ title: 'Remove sample data?', message: 'All sample dancers, costumes, props, volunteers, shows, locations and performance plans will be deleted. Your own records are kept.', confirmLabel: 'Remove sample data', danger: true }))
                     run(() => removeSampleData(), 'Sample data removed.');
                 }}
               >
@@ -185,7 +204,7 @@ export function SettingsPage() {
         </Card>
 
         <Card title="Danger Zone" className="danger-card">
-          <p className="small">Permanently erase every dancer, costume, show, location and performance plan in this browser. Settings are kept.</p>
+          <p className="small">Permanently erase every dancer, costume, prop, volunteer, show, location and performance plan in this browser. Settings are kept.</p>
           <button
             className="btn btn-danger"
             onClick={async () => {

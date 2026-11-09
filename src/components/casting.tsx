@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowRightLeft, CheckCircle2, Copy, Pencil, Plus, Shirt, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, CheckCircle2, Copy, Pencil, Plus, Shirt, Trash2, UserMinus, UserPlus, Users, Wand2, X } from 'lucide-react';
 import { Modal } from './Modal';
 import { Badge, Card, CheckList, EmptyState, Field, ProgressRing, SearchInput, SearchSelect, StatusBadge, type Option } from './ui';
 import { useConfirm, useRun } from './feedback';
@@ -21,24 +21,26 @@ import {
   renameCast,
   setMemberRole,
 } from '../data/actions';
-import { accessoriesFor, buildOverview, byId, castsFor, fullName, issueLabels, ownerCostumeIds, sortedCategories, sortedDancers, type OverviewRow, type Readiness } from '../data/selectors';
-import type { CastList, Database, ID, OwnerType } from '../data/types';
+import { accessoriesFor, buildOverview, buildPropOverview, itemsOf, byId, castsFor, fullName, issueLabels, ownerCostumeIds, sortedCategories, sortedDancers, type OverviewRow, type Readiness } from '../data/selectors';
+import type { CastList, Database, ID, ItemKind, OwnerType } from '../data/types';
+import { itemLabels } from '../lib/labels';
 
 const CAST_SUGGESTIONS: Record<OwnerType, string[]> = {
   show: ['Cast A', 'Cast B', 'Saturday Cast', 'Sunday Cast', 'Understudy Cast', 'Alternate Cast'],
   performance: ['Cast A', 'Cast B', 'Saturday Performance', 'Sunday Performance', 'Matinee', 'Evening Performance'],
 };
 
-function costumeOptions(db: Database, onlyIds?: ID[]): Option[] {
+function costumeOptions(db: Database, onlyIds?: ID[], kind: ItemKind = 'costume'): Option[] {
   const cats = byId(db.categories);
   const order = new Map(sortedCategories(db).map((c, i) => [c.id, i]));
-  const list = onlyIds ? db.costumes.filter((c) => onlyIds.includes(c.id)) : db.costumes;
+  const all = itemsOf(db, kind);
+  const list = onlyIds ? all.filter((c) => onlyIds.includes(c.id)) : all;
   return [...list]
     .sort((a, b) => (order.get(a.categoryId ?? '') ?? 999) - (order.get(b.categoryId ?? '') ?? 999) || a.name.localeCompare(b.name))
     .map((c) => ({
       value: c.id,
       label: c.name,
-      hint: `${c.inventoryNumber} · ${c.size || 'no size'} · qty ${c.quantity}${c.status === 'in_progress' ? ' · IN PROGRESS' : ''}`,
+      hint: `${c.inventoryNumber}${kind === 'costume' ? ` · ${c.size || 'no size'}` : ''} · qty ${c.quantity}${c.status === 'in_progress' ? ' · IN PROGRESS' : ''}`,
       group: c.categoryId ? cats.get(c.categoryId)?.name ?? 'Uncategorized' : 'Uncategorized',
     }));
 }
@@ -120,6 +122,7 @@ function CastCard({ cast, casts, rows, onRename, onAdd, onDuplicate, onDelete }:
     .filter((m) => m.castId === cast.id && dancers.has(m.dancerId))
     .sort((a, b) => fullName(dancers.get(a.dancerId)!).localeCompare(fullName(dancers.get(b.dancerId)!)));
   const others = casts.filter((c) => c.id !== cast.id);
+  const propIds = new Set(itemsOf(db, 'prop').map((p) => p.id));
   const toggle = (id: ID) => {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
@@ -167,6 +170,9 @@ function CastCard({ cast, casts, rows, onRename, onAdd, onDuplicate, onDelete }:
             const mine = rows.filter((r) => r.dancerId === d.id);
             const costumeCount = mine.filter((r) => r.costume).length;
             const issues = mine.some((r) => r.issues.length);
+            const propCount = new Set(
+              db.assignments.filter((a) => a.castId === cast.id && (a.dancerId === d.id || !a.dancerId) && propIds.has(a.costumeId)).map((a) => a.costumeId),
+            ).size;
             return (
               <li key={m.id} className={selected.has(m.id) ? 'on' : ''}>
                 <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggle(m.id)} aria-label={`Select ${fullName(d)}`} />
@@ -183,6 +189,11 @@ function CastCard({ cast, casts, rows, onRename, onAdd, onDuplicate, onDelete }:
                     onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                   />
                 </div>
+                {propCount > 0 && (
+                  <span className="chip chip-prop" title={`${propCount} prop(s)`}>
+                    <Wand2 size={12} /> {propCount}
+                  </span>
+                )}
                 <span className={`chip ${costumeCount ? (issues ? 'chip-warn' : 'chip-ok') : 'chip-bad'}`} title={costumeCount ? `${costumeCount} costume(s)` : 'No costume assigned'}>
                   <Shirt size={12} /> {costumeCount}
                 </span>
@@ -325,41 +336,51 @@ function AddDancersDialog({ cast, onClose }: { cast: CastList | null; onClose: (
 
 /* ========================================================== assignments */
 
-export function CostumeListPanel({ ownerType, ownerId }: { ownerType: OwnerType; ownerId: ID }) {
+export function CostumeListPanel({ ownerType, ownerId, kind = 'costume' }: { ownerType: OwnerType; ownerId: ID; kind?: ItemKind }) {
+  const L = itemLabels[kind];
   const db = useDb();
   const run = useRun();
   const confirm = useConfirm();
   const [adding, setAdding] = useState(false);
   const [assignFor, setAssignFor] = useState<ID[] | null>(null);
-  const ids = ownerCostumeIds(db, ownerType, ownerId);
+  const ids = ownerCostumeIds(db, ownerType, ownerId, kind);
   const { rows } = useMemo(() => buildOverview(db, ownerType, ownerId), [db, ownerType, ownerId]);
+  const propRows = useMemo(() => (kind === 'prop' ? buildPropOverview(db, ownerType, ownerId).rows : []), [db, ownerType, ownerId, kind]);
   const costumes = db.costumes.filter((c) => ids.includes(c.id)).sort((a, b) => a.name.localeCompare(b.name));
+  const whoHas = (id: ID) => {
+    if (kind === 'costume') {
+      const n = rows.filter((r) => r.costume?.id === id).length;
+      return { count: n, text: n ? `${n} dancer${n === 1 ? '' : 's'}` : '' };
+    }
+    const held = propRows.filter((r) => r.prop.id === id && r.target !== 'show');
+    return { count: held.length, text: held.map((r) => (r.target === 'cast' ? `All of ${r.castName}` : r.dancerName)).join(', ') };
+  };
   const cats = byId(db.categories);
   const locs = byId(db.storageLocations);
 
   return (
     <Card
-      title="Costume List"
-      icon={<Shirt size={18} />}
+      title={`${L.One} List`}
+      icon={<L.Icon size={18} />}
       actions={
         <>
           <button className="btn btn-ghost btn-sm" onClick={() => setAdding(true)}>
-            <Plus size={15} /> Add costumes
+            <Plus size={15} /> Add {L.many}
           </button>
           <button className="btn btn-primary btn-sm" onClick={() => setAssignFor([])} disabled={!castsFor(db, ownerType, ownerId).length}>
-            <UserPlus size={15} /> Assign costumes
+            <UserPlus size={15} /> Assign {L.many}
           </button>
         </>
       }
     >
       {!costumes.length ? (
         <EmptyState
-          icon={<Shirt size={26} />}
-          title="No costumes on this list yet"
-          message="Add costumes from your inventory, then assign them to dancers or whole casts."
+          icon={<L.Icon size={26} />}
+          title={`No ${L.many} on this list yet`}
+          message={kind === 'prop' ? 'Add props from your inventory. Assign them to dancers or whole casts, or leave them unassigned as stage / set props.' : 'Add costumes from your inventory, then assign them to dancers or whole casts.'}
           action={
             <button className="btn btn-primary" onClick={() => setAdding(true)}>
-              <Plus size={16} /> Add costumes
+              <Plus size={16} /> Add {L.many}
             </button>
           }
         />
@@ -368,35 +389,36 @@ export function CostumeListPanel({ ownerType, ownerId }: { ownerType: OwnerType;
           <table className="table">
             <thead>
               <tr>
-                <th>Costume</th>
+                <th>{L.One}</th>
                 <th className="minor">Category</th>
-                <th>Size</th>
+                {kind === 'costume' && <th>Size</th>}
                 <th className="minor">Qty</th>
                 <th className="minor">Location</th>
                 <th>Status</th>
-                <th>Wearing</th>
+                <th>{kind === 'costume' ? 'Wearing' : 'Assigned to'}</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {costumes.map((c) => {
-                const wearing = rows.filter((r) => r.costume?.id === c.id).length;
+                const who = whoHas(c.id);
+                const wearing = who.count;
                 return (
                   <tr key={c.id}>
                     <td>
-                      <Link to={`/costumes/${c.id}`} className="link-strong">
+                      <Link to={`${L.base}/${c.id}`} className="link-strong">
                         {c.name}
                       </Link>
                       <div className="small faint">{c.inventoryNumber}</div>
                     </td>
                     <td className="minor">{c.categoryId ? cats.get(c.categoryId)?.name : <span className="faint">Uncategorized</span>}</td>
-                    <td>{c.size || <span className="faint">—</span>}</td>
+                    {kind === 'costume' && <td>{c.size || <span className="faint">—</span>}</td>}
                     <td className="minor">{c.quantity}</td>
                     <td className="minor">{c.storageLocationId ? locs.get(c.storageLocationId)?.name : <span className="faint">Unassigned</span>}</td>
                     <td>
                       <StatusBadge costume={c} compact />
                     </td>
-                    <td>{wearing ? `${wearing} dancer${wearing === 1 ? '' : 's'}` : <span className="faint">Not assigned</span>}</td>
+                    <td className={kind === 'prop' ? 'small' : ''}>{wearing ? who.text : <span className="faint">{kind === 'prop' ? 'Stage / set (no dancer)' : 'Not assigned'}</span>}</td>
                     <td className="row-actions">
                       <button className="btn btn-ghost btn-sm" onClick={() => setAssignFor([c.id])} disabled={!castsFor(db, ownerType, ownerId).length}>
                         Assign
@@ -408,13 +430,13 @@ export function CostumeListPanel({ ownerType, ownerId }: { ownerType: OwnerType;
                         onClick={async () => {
                           if (
                             await confirm({
-                              title: 'Remove costume from list?',
-                              message: wearing ? `“${c.name}” is assigned to ${wearing} dancer(s) here. Those assignments will be removed too. The costume stays in your inventory.` : `Remove “${c.name}” from this list? The costume stays in your inventory.`,
+                              title: `Remove ${L.one} from list?`,
+                              message: wearing ? `“${c.name}” is assigned ${wearing} time(s) here. Those assignments will be removed too. The ${L.one} stays in your inventory.` : `Remove “${c.name}” from this list? The ${L.one} stays in your inventory.`,
                               confirmLabel: 'Remove',
                               danger: true,
                             })
                           )
-                            run(() => removeCostumeFromOwner(ownerType, ownerId, c.id), 'Costume removed from list.');
+                            run(() => removeCostumeFromOwner(ownerType, ownerId, c.id), `${L.One} removed from list.`);
                         }}
                       >
                         <X size={16} />
@@ -427,13 +449,14 @@ export function CostumeListPanel({ ownerType, ownerId }: { ownerType: OwnerType;
           </table>
         </div>
       )}
-      <AddCostumesDialog open={adding} onClose={() => setAdding(false)} ownerType={ownerType} ownerId={ownerId} />
-      <AssignDialog open={!!assignFor} onClose={() => setAssignFor(null)} ownerType={ownerType} ownerId={ownerId} initialCostumes={assignFor ?? []} />
+      <AddCostumesDialog open={adding} onClose={() => setAdding(false)} ownerType={ownerType} ownerId={ownerId} kind={kind} />
+      <AssignDialog open={!!assignFor} onClose={() => setAssignFor(null)} ownerType={ownerType} ownerId={ownerId} initialCostumes={assignFor ?? []} kind={kind} />
     </Card>
   );
 }
 
-function AddCostumesDialog({ open, onClose, ownerType, ownerId }: { open: boolean; onClose: () => void; ownerType: OwnerType; ownerId: ID }) {
+function AddCostumesDialog({ open, onClose, ownerType, ownerId, kind }: { open: boolean; onClose: () => void; ownerType: OwnerType; ownerId: ID; kind: ItemKind }) {
+  const L = itemLabels[kind];
   const db = useDb();
   const run = useRun();
   const { editCostume } = useEditors();
@@ -446,55 +469,57 @@ function AddCostumesDialog({ open, onClose, ownerType, ownerId }: { open: boolea
       setSelected(new Set());
       // Default to this show's category so the right costumes appear first.
       const showId = ownerType === 'show' ? ownerId : db.performances.find((p) => p.id === ownerId)?.showId;
-      if (ownerType === 'performance' && showId && ownerCostumeIds(db, 'show', showId).length) setSource(`show:${showId}`);
+      if (ownerType === 'performance' && showId && ownerCostumeIds(db, 'show', showId, kind).length) setSource(`show:${showId}`);
       else {
         const catId = showId ? db.shows.find((s) => s.id === showId)?.categoryId : null;
         setSource(catId ? `cat:${catId}` : 'all');
       }
     }
   }
-  const existing = new Set(ownerCostumeIds(db, ownerType, ownerId));
-  let pool = db.costumes.map((c) => c.id);
-  if (source.startsWith('cat:')) pool = db.costumes.filter((c) => c.categoryId === source.slice(4)).map((c) => c.id);
-  if (source === 'cat:none') pool = db.costumes.filter((c) => !c.categoryId).map((c) => c.id);
-  if (source.startsWith('show:')) pool = ownerCostumeIds(db, 'show', source.slice(5));
-  const options = costumeOptions(db, pool.filter((id) => !existing.has(id)));
+  const existing = new Set(ownerCostumeIds(db, ownerType, ownerId, kind));
+  const items = itemsOf(db, kind);
+  let pool = items.map((c) => c.id);
+  if (source.startsWith('cat:')) pool = items.filter((c) => c.categoryId === source.slice(4)).map((c) => c.id);
+  if (source === 'cat:none') pool = items.filter((c) => !c.categoryId).map((c) => c.id);
+  if (source.startsWith('show:')) pool = ownerCostumeIds(db, 'show', source.slice(5), kind);
+  const options = costumeOptions(db, pool.filter((id) => !existing.has(id)), kind);
   const sources: Option[] = [
-    { value: 'all', label: 'All costumes' },
+    { value: 'all', label: `All ${L.many}` },
     ...sortedCategories(db).map((c) => ({ value: `cat:${c.id}`, label: `Category: ${c.name}` })),
     { value: 'cat:none', label: 'Category: Uncategorized' },
-    ...db.shows.filter((s) => !(ownerType === 'show' && s.id === ownerId)).map((s) => ({ value: `show:${s.id}`, label: `Show costume list: ${s.name}` })),
+    ...db.shows.filter((s) => !(ownerType === 'show' && s.id === ownerId)).map((s) => ({ value: `show:${s.id}`, label: `Show ${L.one} list: ${s.name}` })),
   ];
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Add Costumes"
-      subtitle="Step 1: choose a show or category · Step 2: tick the costumes to add"
+      title={`Add ${L.Many}`}
+      subtitle={`Step 1: choose a show or category · Step 2: tick the ${L.many} to add`}
       footer={
         <>
-          <button className="btn btn-ghost" onClick={() => editCostume()}>
-            <Plus size={15} /> New costume
+          <button className="btn btn-ghost" onClick={() => editCostume(undefined, { defaults: { kind } })}>
+            <Plus size={15} /> New {L.one}
           </button>
           <span className="spacer" />
           <button className="btn btn-ghost" onClick={onClose}>
             Cancel
           </button>
-          <button className="btn btn-primary" disabled={!selected.size} onClick={() => run(() => (addCostumesToOwner(ownerType, ownerId, [...selected]), true), `Added ${selected.size} costume${selected.size === 1 ? '' : 's'}.`) && onClose()}>
-            Add {selected.size || ''} costume{selected.size === 1 ? '' : 's'}
+          <button className="btn btn-primary" disabled={!selected.size} onClick={() => run(() => (addCostumesToOwner(ownerType, ownerId, [...selected]), true), `Added ${selected.size} ${selected.size === 1 ? L.one : L.many}.`) && onClose()}>
+            Add {selected.size || ''} {selected.size === 1 ? L.one : L.many}
           </button>
         </>
       }
     >
-      <Field label="Show or costume category">
-        <SearchSelect ariaLabel="Show or costume category" value={source} onChange={(v) => setSource(v || 'all')} options={sources} />
+      <Field label={`Show or ${L.one} category`}>
+        <SearchSelect ariaLabel="Show or category" value={source} onChange={(v) => setSource(v || 'all')} options={sources} />
       </Field>
-      <CheckList options={options} selected={selected} onChange={setSelected} emptyText="No more costumes to add from this list." />
+      <CheckList options={options} selected={selected} onChange={setSelected} emptyText={`No more ${L.many} to add from this list.`} />
     </Modal>
   );
 }
 
-function AssignDialog({ open, onClose, ownerType, ownerId, initialCostumes }: { open: boolean; onClose: () => void; ownerType: OwnerType; ownerId: ID; initialCostumes: ID[] }) {
+function AssignDialog({ open, onClose, ownerType, ownerId, initialCostumes, kind }: { open: boolean; onClose: () => void; ownerType: OwnerType; ownerId: ID; initialCostumes: ID[]; kind: ItemKind }) {
+  const L = itemLabels[kind];
   const db = useDb();
   const run = useRun();
   const casts = castsFor(db, ownerType, ownerId);
@@ -511,13 +536,13 @@ function AssignDialog({ open, onClose, ownerType, ownerId, initialCostumes }: { 
       setMode('dancers');
       setCostumes(new Set(initialCostumes));
       setDancers(new Set());
-      setShowAll(!ownerCostumeIds(db, ownerType, ownerId).length);
+      setShowAll(!ownerCostumeIds(db, ownerType, ownerId, kind).length);
     }
   }
   const dancerMap = byId(db.dancers);
   const members = db.castMembers.filter((m) => m.castId === castId && dancerMap.has(m.dancerId));
-  const listIds = ownerCostumeIds(db, ownerType, ownerId);
-  const costumeOpts = costumeOptions(db, showAll ? undefined : [...new Set([...listIds, ...initialCostumes])]);
+  const listIds = ownerCostumeIds(db, ownerType, ownerId, kind);
+  const costumeOpts = costumeOptions(db, showAll ? undefined : [...new Set([...listIds, ...initialCostumes])], kind);
   const dancerOpts = members
     .map((m) => {
       const d = dancerMap.get(m.dancerId)!;
@@ -536,7 +561,7 @@ function AssignDialog({ open, onClose, ownerType, ownerId, initialCostumes }: { 
     <Modal
       open={open}
       onClose={onClose}
-      title="Assign Costumes"
+      title={`Assign ${L.Many}`}
       size="lg"
       footer={
         <>
@@ -551,14 +576,14 @@ function AssignDialog({ open, onClose, ownerType, ownerId, initialCostumes }: { 
     >
       <div className="grid-2 assign-grid">
         <div>
-          <h4 className="mini-title">1. Costumes</h4>
+          <h4 className="mini-title">1. {L.Many}</h4>
           <label className="check-inline small">
-            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> Show all costumes in inventory
+            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> Show all {L.many} in inventory
           </label>
-          <CheckList options={costumeOpts} selected={costumes} onChange={setCostumes} height={300} emptyText="Add costumes to this list first, or tick “Show all costumes”." />
+          <CheckList options={costumeOpts} selected={costumes} onChange={setCostumes} height={300} emptyText={`Add ${L.many} to this list first, or tick “Show all ${L.many}”.`} />
         </div>
         <div>
-          <h4 className="mini-title">2. Who wears them?</h4>
+          <h4 className="mini-title">2. {kind === 'costume' ? 'Who wears them?' : 'Who uses them?'}</h4>
           <Field label="Cast list">
             <select className="input" value={castId} onChange={(e) => (setCastId(e.target.value), setDancers(new Set()))}>
               {casts.map((c) => (
@@ -579,7 +604,7 @@ function AssignDialog({ open, onClose, ownerType, ownerId, initialCostumes }: { 
           {mode === 'dancers' ? (
             <CheckList options={dancerOpts} selected={dancers} onChange={setDancers} height={220} emptyText="This cast has no dancers yet." />
           ) : (
-            <p className="small faint pad">Everyone in this cast ({members.length} dancers) — including dancers added later — will wear the selected costume(s).</p>
+            <p className="small faint pad">Everyone in this cast ({members.length} dancers) — including dancers added later — will {kind === 'costume' ? 'wear' : 'use'} the selected {L.many}.</p>
           )}
         </div>
       </div>
@@ -847,5 +872,142 @@ function ChangeCostumeDialog({ row, onClose }: { row: OverviewRow | null; onClos
       </Field>
       {acc.length > 0 && <p className="small faint">Includes: {acc.map((a) => `${a.name} ×${a.quantity}`).join(', ')}</p>}
     </Modal>
+  );
+}
+
+/* ======================================================== props overview */
+
+const propIssueLabels = { not_ready: 'In progress', missing_part: 'Missing part', quantity_short: 'Not enough on hand' } as const;
+
+export function PropOverviewTable({ ownerType, ownerId }: { ownerType: OwnerType; ownerId: ID }) {
+  const db = useDb();
+  const run = useRun();
+  const confirm = useConfirm();
+  const { rows, readiness } = useMemo(() => buildPropOverview(db, ownerType, ownerId), [db, ownerType, ownerId]);
+  const casts = castsFor(db, ownerType, ownerId);
+  const [castFilter, setCastFilter] = useState('');
+  const [q, setQ] = useState('');
+  const shown = rows.filter(
+    (r) => (!castFilter || (castFilter === 'none' ? r.target === 'show' : r.castId === castFilter)) && (!q || `${r.prop.name} ${r.dancerName} ${r.role}`.toLowerCase().includes(q.toLowerCase())),
+  );
+  return (
+    <Card
+      title="Props Overview"
+      icon={<Wand2 size={18} />}
+      actions={
+        readiness.total > 0 && (
+          <span className="small faint">
+            {readiness.ready}/{readiness.total} props ready{readiness.warnings > 0 && <span className="warn-text inline"> · {readiness.warnings} warning{readiness.warnings === 1 ? '' : 's'}</span>}
+          </span>
+        )
+      }
+    >
+      {!rows.length ? (
+        <EmptyState icon={<Wand2 size={26} />} title="No props yet" message="Add props to the list above, then assign them to dancers, whole casts, or leave them as stage / set props." />
+      ) : (
+        <>
+          <div className="toolbar">
+            <SearchInput value={q} onChange={setQ} placeholder="Search prop or dancer…" />
+            <select className="input input-auto" value={castFilter} onChange={(e) => setCastFilter(e.target.value)} aria-label="Filter props by cast">
+              <option value="">All casts</option>
+              {casts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+              <option value="none">Stage / set props</option>
+            </select>
+          </div>
+          <div className="table-wrap">
+            <table className="table prop-overview">
+              <thead>
+                <tr>
+                  <th>Prop</th>
+                  <th>Assigned to</th>
+                  <th>Cast</th>
+                  <th className="minor">Parts</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((r) => (
+                  <tr key={r.key} className={r.issues.length ? 'row-warn' : ''}>
+                    <td>
+                      <Link to={`/props/${r.prop.id}`} className="link-strong">
+                        {r.prop.name}
+                      </Link>
+                      <div className="small faint">
+                        {r.prop.inventoryNumber} · qty {r.prop.quantity}
+                      </div>
+                    </td>
+                    <td>
+                      {r.target === 'dancer' ? (
+                        <>
+                          <Link to={`/dancers/${r.dancerId}`}>{r.dancerName}</Link>
+                          {r.role && <div className="small faint">{r.role}</div>}
+                        </>
+                      ) : r.target === 'cast' ? (
+                        <Badge tone="rose">Whole cast</Badge>
+                      ) : (
+                        <span className="faint">Stage / set</span>
+                      )}
+                    </td>
+                    <td>{r.castName || <span className="faint">—</span>}</td>
+                    <td className="minor">
+                      {r.parts.length ? (
+                        r.parts.map((a) => (
+                          <span key={a.id} className={`acc-pill ${a.quantity <= 0 ? 'missing' : ''}`}>
+                            {a.name}
+                            {a.quantity <= 0 ? ' — missing' : ` ×${a.quantity}`}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="faint">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <StatusBadge costume={r.prop} compact />
+                      {r.issues
+                        .filter((i) => i !== 'not_ready')
+                        .map((i) => (
+                          <div key={i} className="small warn-text" title={r.issueDetails.join('\n')}>
+                            <AlertTriangle size={11} /> {propIssueLabels[i]}
+                          </div>
+                        ))}
+                    </td>
+                    <td className="row-actions">
+                      <button
+                        className="icon-btn danger"
+                        aria-label={`Remove ${r.prop.name} assignment`}
+                        title="Remove assignment"
+                        onClick={async () => {
+                          const msg =
+                            r.target === 'show'
+                              ? `Remove “${r.prop.name}” from this prop list?`
+                              : r.target === 'cast'
+                                ? `Unassign “${r.prop.name}” from the whole cast “${r.castName}”?`
+                                : `Unassign “${r.prop.name}” from ${r.dancerName}?`;
+                          if (await confirm({ title: 'Remove prop assignment?', message: msg, confirmLabel: 'Remove', danger: true })) run(() => removeAssignments([r.assignment.id]), 'Prop assignment removed.');
+                        }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!shown.length && (
+                  <tr>
+                    <td colSpan={6} className="faint center pad">
+                      No props match these filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </Card>
   );
 }

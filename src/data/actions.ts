@@ -16,6 +16,9 @@ import type {
   Settings,
   Show,
   StorageLocation,
+  ItemKind,
+  Volunteer,
+  AvailabilitySlot,
 } from './types';
 
 /* ------------------------------------------------------------------ helpers */
@@ -261,17 +264,25 @@ export type CostumeInput = Pick<
   status: CostumeStatus;
   progressReason: ProgressReason | null;
   accessories: AccessoryInput[];
+  /** Only used when creating; an item's kind never changes. Defaults to costume. */
+  kind?: ItemKind;
 };
 
-function nextInventoryNumber(db: Database) {
-  const prefix = (db.settings.costumeIdPrefix || 'COS').trim();
-  let n = db.meta.nextCostumeNumber;
+export function itemKind(c: Pick<Costume, 'kind'>): ItemKind {
+  return c.kind ?? 'costume';
+}
+
+function nextInventoryNumber(db: Database, kind: ItemKind) {
+  const isProp = kind === 'prop';
+  const prefix = ((isProp ? db.settings.propIdPrefix : db.settings.costumeIdPrefix) || (isProp ? 'PROP' : 'COS')).trim();
+  let n = (isProp ? db.meta.nextPropNumber : db.meta.nextCostumeNumber) || 1;
   let code = `${prefix}-${String(n).padStart(4, '0')}`;
   while (db.costumes.some((c) => c.inventoryNumber === code)) {
     n += 1;
     code = `${prefix}-${String(n).padStart(4, '0')}`;
   }
-  db.meta.nextCostumeNumber = n + 1;
+  if (isProp) db.meta.nextPropNumber = n + 1;
+  else db.meta.nextCostumeNumber = n + 1;
   return code;
 }
 
@@ -280,7 +291,7 @@ function describeAccessories(list: { name: string; quantity: number }[]) {
 }
 
 export function saveCostume(input: CostumeInput, id?: ID): ID {
-  const name = required(input.name, 'Costume name');
+  const name = required(input.name, input.kind === 'prop' ? 'Prop name' : 'Costume name');
   const quantity = wholeNumber(Number(input.quantity), 'Available quantity');
   const dateAdded = validDate(input.dateAdded, 'Date added') || todayStr();
   const accessories = input.accessories
@@ -320,16 +331,18 @@ export function saveCostume(input: CostumeInput, id?: ID): ID {
       if (before !== after) addNote(db, id, 'accessory', `Accessories updated: ${after}.`);
       Object.assign(costume, fields, { updatedAt: t });
     } else {
+      const kind = input.kind ?? 'costume';
       costume = {
         ...stamp(),
+        ...(kind === 'prop' ? { kind } : {}),
         ...fields,
-        inventoryNumber: nextInventoryNumber(db),
+        inventoryNumber: nextInventoryNumber(db, kind),
         status: 'ready',
         progressReason: null,
         statusUpdatedAt: t,
       };
       db.costumes.push(costume);
-      addNote(db, costume.id, 'general', 'Costume added to inventory.');
+      addNote(db, costume.id, 'general', `${kind === 'prop' ? 'Prop' : 'Costume'} added to inventory.`);
     }
 
     // Replace accessory rows, keeping ids for ones that still exist.
@@ -428,7 +441,7 @@ export function duplicateCostume(id: ID): ID {
       ...stamp(),
       isSample: false,
       name: `${src.name} (copy)`,
-      inventoryNumber: nextInventoryNumber(db),
+      inventoryNumber: nextInventoryNumber(db, itemKind(src)),
       dateAdded: todayStr(),
       statusUpdatedAt: t,
     };
@@ -745,16 +758,70 @@ export function removeCostumeFromOwner(ownerType: OwnerType, ownerId: ID, costum
 
 /* ------------------------------------------------------------ settings/data */
 
+/* --------------------------------------------------------------- volunteers */
+
+export type VolunteerInput = Omit<Volunteer, 'id' | 'createdAt' | 'updatedAt' | 'isSample'>;
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export function saveVolunteer(input: VolunteerInput, id?: ID): ID {
+  const firstName = required(input.firstName, 'First name');
+  const lastName = input.lastName.trim();
+  const email = input.email.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ValidationError('Email address does not look right.');
+  const phone = input.phone.trim();
+  if (phone && phone.replace(/\D/g, '').length < 7) throw new ValidationError('Phone number looks too short.');
+  const availability: AvailabilitySlot[] = input.availability.map((slot, i) => {
+    const label = `Availability row ${i + 1}`;
+    if (slot.type === 'date') {
+      if (!slot.date) throw new ValidationError(`${label}: choose a date.`);
+      validDate(slot.date, `${label} date`);
+    } else if (!(slot.weekday >= 0 && slot.weekday <= 6)) {
+      throw new ValidationError(`${label}: choose a day of the week.`);
+    }
+    if (slot.start && !TIME.test(slot.start)) throw new ValidationError(`${label}: start time is not valid.`);
+    if (slot.end && !TIME.test(slot.end)) throw new ValidationError(`${label}: end time is not valid.`);
+    if (slot.start && slot.end && slot.end <= slot.start) throw new ValidationError(`${label}: end time must be after the start time.`);
+    return { ...slot, id: slot.id || newId(), date: slot.type === 'date' ? slot.date : '', note: slot.note.trim() };
+  });
+  const skills = [...new Set(input.skills.map((x) => x.trim()).filter(Boolean))];
+  const clean: VolunteerInput = { ...input, firstName, lastName, email, phone, skills, availability, notes: input.notes.trim() };
+  return commit((db) => {
+    if (id) {
+      Object.assign(findOrThrow(db.volunteers, id, 'This volunteer'), clean, { updatedAt: nowIso() });
+      return id;
+    }
+    const rec: Volunteer = { ...stamp(), ...clean };
+    db.volunteers.push(rec);
+    return rec.id;
+  });
+}
+
+export function deleteVolunteers(ids: ID[]) {
+  const set = new Set(ids);
+  commit((db) => {
+    db.volunteers = db.volunteers.filter((v) => !set.has(v.id));
+  });
+}
+
 export function updateSettings(patch: Partial<Settings>) {
   if (patch.studioName !== undefined) required(patch.studioName, 'Studio name');
-  if (patch.costumeIdPrefix !== undefined) {
-    const p = required(patch.costumeIdPrefix, 'Costume ID prefix');
-    if (!/^[A-Za-z0-9]{1,8}$/.test(p)) throw new ValidationError('Costume ID prefix must be 1–8 letters or numbers.');
+  for (const [key, label] of [['costumeIdPrefix', 'Costume ID prefix'], ['propIdPrefix', 'Prop ID prefix']] as const) {
+    if (patch[key] === undefined) continue;
+    const p = required(patch[key], label);
+    if (!/^[A-Za-z0-9]{1,8}$/.test(p)) throw new ValidationError(`${label} must be 1–8 letters or numbers.`);
+  }
+  if (patch.costumeIdPrefix && patch.propIdPrefix && patch.costumeIdPrefix.toUpperCase() === patch.propIdPrefix.toUpperCase()) {
+    throw new ValidationError('Costumes and props need different ID prefixes.');
   }
   commit((db) => {
     Object.assign(db.settings, patch);
     db.settings.levels = db.settings.levels.map((s) => s.trim()).filter(Boolean);
     db.settings.sizes = db.settings.sizes.map((s) => s.trim()).filter(Boolean);
+    db.settings.skills = db.settings.skills.map((s) => s.trim()).filter(Boolean);
+    if (db.settings.costumeIdPrefix.toUpperCase() === db.settings.propIdPrefix.toUpperCase()) {
+      throw new ValidationError('Costumes and props need different ID prefixes.');
+    }
   });
 }
 

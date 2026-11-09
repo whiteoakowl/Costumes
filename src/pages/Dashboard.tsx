@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarHeart, CheckCircle2, Clock, Plus, Scissors, Shirt, Sparkles, Theater, Users, Warehouse, Wrench } from 'lucide-react';
+import { CalendarHeart, CheckCircle2, Clock, Plus, Scissors, Shirt, Sparkles, Theater, Users, Warehouse, Wrench , HandHeart, Wand2} from 'lucide-react';
 import { useDb } from '../data/store';
+import { itemLabels } from '../lib/labels';
 import { Card, EmptyState, PageHeader, ProgressRing, StatCard, StatusBadge } from '../components/ui';
 import { useEditors } from '../components/editors';
-import { buildOverview, byId, formatDate, formatDateTime, formatTime, isUpcomingPerformance, isUpcomingShow, ownerCostumeIds, ownerDancerIds } from '../data/selectors';
+import { itemsOf, kindOf, buildOverview, byId, formatDate, formatDateTime, formatTime, isUpcomingPerformance, isUpcomingShow, ownerCostumeIds, ownerDancerIds } from '../data/selectors';
 import type { Costume } from '../data/types';
 
 export function Dashboard() {
@@ -12,15 +13,21 @@ export function Dashboard() {
   const ed = useEditors();
 
   const stats = useMemo(() => {
-    const ready = db.costumes.filter((c) => c.status === 'ready');
-    const inProgress = db.costumes.filter((c) => c.status === 'in_progress');
+    const costumes = itemsOf(db, 'costume');
+    const props = itemsOf(db, 'prop');
+    const ready = costumes.filter((c) => c.status === 'ready');
+    const inProgress = costumes.filter((c) => c.status === 'in_progress');
+    const propsInProgress = props.filter((c) => c.status === 'in_progress');
     const upcomingShows = db.shows.filter((s) => isUpcomingShow(s));
     const upcomingPerfs = db.performances.filter((p) => isUpcomingPerformance(p)).sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999') || a.time.localeCompare(b.time));
     return {
       ready,
       inProgress,
-      repairs: inProgress.filter((c) => c.progressReason !== 'alteration'),
-      altering: inProgress.filter((c) => c.progressReason === 'alteration'),
+      costumes,
+      props,
+      propsInProgress,
+      repairs: [...inProgress, ...propsInProgress].filter((c) => c.progressReason !== 'alteration'),
+      altering: [...inProgress, ...propsInProgress].filter((c) => c.progressReason === 'alteration'),
       recent: [...db.costumes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6),
       upcomingShows,
       upcomingPerfs,
@@ -37,11 +44,13 @@ export function Dashboard() {
 
       <div className="stats">
         <StatCard label="Dancers" value={db.dancers.length} icon={<Users size={20} />} to="/dancers" tone="rose" />
-        <StatCard label="Costumes" value={db.costumes.length} icon={<Shirt size={20} />} to="/costumes" tone="plum" />
+        <StatCard label="Costumes" value={stats.costumes.length} icon={<Shirt size={20} />} to="/costumes" tone="plum" />
         <StatCard label="Costumes ready" value={stats.ready.length} icon={<CheckCircle2 size={20} />} to="/costumes?status=ready" tone="sage" />
         <StatCard label="In progress / repairs" value={stats.inProgress.length} icon={<Wrench size={20} />} to="/costumes?status=in_progress" tone="amber" />
         <StatCard label="Upcoming shows" value={stats.upcomingShows.length} icon={<Theater size={20} />} to="/shows" tone="sand" />
         <StatCard label="Active performances" value={stats.upcomingPerfs.length} icon={<CalendarHeart size={20} />} to="/performances" tone="slate" hint="Upcoming plans" />
+        <StatCard label="Props" value={stats.props.length} icon={<Wand2 size={20} />} to="/props" tone="plum" hint={stats.propsInProgress.length ? `${stats.propsInProgress.length} in progress` : 'All ready'} />
+        <StatCard label="Volunteers" value={db.volunteers.length} icon={<HandHeart size={20} />} to="/volunteers" tone="rose" />
       </div>
 
       <div className="dash-grid">
@@ -109,6 +118,9 @@ export function Dashboard() {
             <button className="quick-btn" onClick={() => ed.editCostume(undefined, { navigate: true })}>
               <Shirt size={18} /> Add a costume
             </button>
+            <button className="quick-btn" onClick={() => ed.editProp(undefined, { navigate: true })}>
+              <Wand2 size={18} /> Add a prop
+            </button>
             <button className="quick-btn" onClick={() => ed.editShow(undefined, { navigate: true })}>
               <Theater size={18} /> Create a show
             </button>
@@ -118,14 +130,17 @@ export function Dashboard() {
             <button className="quick-btn" onClick={() => ed.editLocation(undefined, { navigate: true })}>
               <Warehouse size={18} /> Add a storage location
             </button>
+            <button className="quick-btn" onClick={() => ed.editVolunteer(undefined, { navigate: true })}>
+              <HandHeart size={18} /> Add a volunteer
+            </button>
           </div>
         </Card>
 
         <Card title="Needs Repairs" icon={<Wrench size={18} />}>
-          <CostumeMiniList list={stats.repairs} empty="No costumes need repairs." locs={locs} />
+          <CostumeMiniList list={stats.repairs} empty="No costumes or props need repairs." locs={locs} />
         </Card>
         <Card title="Being Altered" icon={<Scissors size={18} />}>
-          <CostumeMiniList list={stats.altering} empty="No costumes are being altered." locs={locs} />
+          <CostumeMiniList list={stats.altering} empty="Nothing is being altered." locs={locs} />
         </Card>
         <Card title="Ready" icon={<CheckCircle2 size={18} />} actions={<Link to="/costumes?status=ready" className="btn btn-ghost btn-sm">View all</Link>}>
           <CostumeMiniList list={stats.ready.slice(0, 6)} empty="No costumes are marked ready yet." locs={locs} more={stats.ready.length - 6} />
@@ -146,7 +161,7 @@ export function Dashboard() {
               {stats.recent.map((c) => (
                 <li key={c.id}>
                   <div>
-                    <Link to={`/costumes/${c.id}`} className="link-strong">
+                    <Link to={`${itemLabels[kindOf(c)].base}/${c.id}`} className="link-strong">
                       {c.name}
                     </Link>
                     <div className="small faint">
@@ -193,9 +208,10 @@ function CostumeMiniList({ list, empty, locs, more = 0 }: { list: Costume[]; emp
       {list.map((c) => (
         <li key={c.id}>
           <div>
-            <Link to={`/costumes/${c.id}`} className="link-strong">
+            <Link to={`${itemLabels[kindOf(c)].base}/${c.id}`} className="link-strong">
               {c.name}
             </Link>
+            {kindOf(c) === 'prop' && <span className="badge badge-rose tiny-badge">Prop</span>}
             <div className="small faint">
               {c.inventoryNumber} · {c.storageLocationId ? locs.get(c.storageLocationId)?.name : 'Unassigned'}
               {c.status === 'in_progress' && c.repairNotes ? ` · ${c.repairNotes}` : ''}

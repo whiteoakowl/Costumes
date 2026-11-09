@@ -19,9 +19,12 @@ import {
   type LocationInput,
   type PerformanceInput,
   type ShowInput,
+  saveVolunteer,
+  type VolunteerInput,
 } from '../data/actions';
-import { accessoriesFor, sortedCategories, sortedLocations } from '../data/selectors';
-import type { CostumeStatus, ID, ProgressReason } from '../data/types';
+import { accessoriesFor, sortedCategories, sortedLocations, WEEKDAYS } from '../data/selectors';
+import type { AvailabilitySlot, CostumeStatus, ID, ItemKind, ProgressReason } from '../data/types';
+import { itemLabels } from '../lib/labels';
 
 interface EditorProps {
   open: boolean;
@@ -209,9 +212,11 @@ export function CostumeForm({ open, onClose, id, onSaved, defaults }: EditorProp
   const set = <K extends keyof CostumeDraft>(k: K, val: CostumeDraft[K]) => setV((p) => (p ? { ...p, [k]: val } : p));
   const setAcc = (key: string, patch: Partial<AccessoryInput>) => set('accessories', v.accessories.map((a) => (a.key === key ? { ...a, ...patch } : a)));
   const existing = id ? db.costumes.find((x) => x.id === id) : undefined;
+  const kind: ItemKind = existing ? existing.kind ?? 'costume' : v.kind ?? 'costume';
+  const L = itemLabels[kind];
 
   const submit = () => {
-    const saved = run(() => saveCostume(v, id), id ? 'Costume updated.' : `${v.name.trim() || 'Costume'} added to inventory.`);
+    const saved = run(() => saveCostume({ ...v, kind }, id), id ? `${L.One} updated.` : `${v.name.trim() || L.One} added to inventory.`);
     if (saved) {
       onSaved?.(saved);
       onClose();
@@ -219,9 +224,9 @@ export function CostumeForm({ open, onClose, id, onSaved, defaults }: EditorProp
   };
 
   return (
-    <FormModal open={open} onClose={onClose} title={id ? 'Edit Costume' : 'Add Costume'} subtitle={existing ? `${existing.inventoryNumber} · ID is permanent` : 'A costume ID is generated automatically'} onSubmit={submit} size="lg">
+    <FormModal open={open} onClose={onClose} title={id ? `Edit ${L.One}` : `Add ${L.One}`} subtitle={existing ? `${existing.inventoryNumber} · ID is permanent` : `A ${L.one} ID is generated automatically`} onSubmit={submit} size="lg">
       <div className="grid-2">
-        <Field label="Costume name" required className="span-2">
+        <Field label={`${L.One} name`} required className="span-2">
           <input className="input" value={v.name} onChange={(e) => set('name', e.target.value)} autoFocus />
         </Field>
         <Field label="Show type / category">
@@ -230,9 +235,11 @@ export function CostumeForm({ open, onClose, id, onSaved, defaults }: EditorProp
         <Field label="Storage location" hint={!db.storageLocations.length ? 'Add locations on the Storage Locations page' : undefined}>
           <SearchSelect ariaLabel="Storage location" value={v.storageLocationId ?? ''} onChange={(x) => set('storageLocationId', x || null)} options={locations} noneLabel="Unassigned" />
         </Field>
-        <Field label="Size">
-          <SizeInput listId="sizes-costume-form" value={v.size} onChange={(x) => set('size', x)} />
-        </Field>
+        {kind === 'costume' && (
+          <Field label="Size">
+            <SizeInput listId="sizes-costume-form" value={v.size} onChange={(x) => set('size', x)} />
+          </Field>
+        )}
         <Field label="Available quantity">
           <input className="input" type="number" min={0} step={1} value={v.quantity} onChange={(e) => set('quantity', e.target.value === '' ? 0 : Number(e.target.value))} />
         </Field>
@@ -248,11 +255,11 @@ export function CostumeForm({ open, onClose, id, onSaved, defaults }: EditorProp
       </Field>
 
       <div className="field">
-        <span className="field-label">Accessories included</span>
+        <span className="field-label">{L.parts} included</span>
         <div className="acc-list">
           {v.accessories.map((a) => (
             <div key={a.key} className="acc-row">
-              <input className="input" placeholder="e.g. Headpiece" value={a.name} onChange={(e) => setAcc(a.key, { name: e.target.value })} aria-label="Accessory name" list="acc-suggestions" />
+              <input className="input" placeholder={L.partExample} value={a.name} onChange={(e) => setAcc(a.key, { name: e.target.value })} aria-label="Accessory name" list={kind === 'costume' ? 'acc-suggestions' : undefined} />
               <input className="input acc-qty" type="number" min={0} value={a.quantity} onChange={(e) => setAcc(a.key, { quantity: e.target.value === '' ? 0 : Number(e.target.value) })} aria-label="Accessory quantity" />
               <button type="button" className="icon-btn" aria-label="Remove accessory" onClick={() => set('accessories', v.accessories.filter((x) => x.key !== a.key))}>
                 <Trash2 size={16} />
@@ -265,9 +272,9 @@ export function CostumeForm({ open, onClose, id, onSaved, defaults }: EditorProp
             ))}
           </datalist>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => set('accessories', [...v.accessories, newAccessory()])}>
-            <Plus size={15} /> Add accessory
+            <Plus size={15} /> Add {L.part}
           </button>
-          <span className="field-hint">Set quantity to 0 to flag an accessory as missing.</span>
+          <span className="field-hint">Set quantity to 0 to flag {kind === 'costume' ? 'an accessory' : 'a part'} as missing.</span>
         </div>
       </div>
 
@@ -279,7 +286,7 @@ export function CostumeForm({ open, onClose, id, onSaved, defaults }: EditorProp
           <textarea className="input" rows={2} value={v.notes} onChange={(e) => set('notes', e.target.value)} />
         </Field>
       </div>
-      {id && <p className="small faint">Changes to size, location, category, quantity and accessories are recorded automatically in the costume's notes log.</p>}
+      {id && <p className="small faint">Changes to {kind === 'costume' ? 'size, ' : ''}location, category, quantity and {L.parts.toLowerCase()} are recorded automatically in the {L.one}'s notes log.</p>}
     </FormModal>
   );
 }
@@ -526,6 +533,144 @@ export function PerformanceForm({ open, onClose, id, onSaved, defaultShowId }: E
           Start with this show's cast lists and costume assignments
         </label>
       )}
+    </FormModal>
+  );
+}
+
+/* ------------------------------------------------------------ volunteer */
+
+const emptyVolunteer: VolunteerInput = { firstName: '', lastName: '', email: '', phone: '', preferredContact: '', skills: [], availability: [], notes: '' };
+let slotKey = 0;
+const newSlot = (): AvailabilitySlot => ({ id: `new-${++slotKey}`, type: 'date', date: '', weekday: 6, start: '', end: '', note: '' });
+
+export function VolunteerForm({ open, onClose, id, onSaved }: EditorProps) {
+  const db = useDb();
+  const run = useRun();
+  const [v, setV] = useState<VolunteerInput>(emptyVolunteer);
+  const [customSkill, setCustomSkill] = useState('');
+  useEffect(() => {
+    if (!open) return;
+    const x = id ? db.volunteers.find((r) => r.id === id) : undefined;
+    setV(
+      x
+        ? { firstName: x.firstName, lastName: x.lastName, email: x.email, phone: x.phone, preferredContact: x.preferredContact, skills: [...x.skills], availability: x.availability.map((s) => ({ ...s })), notes: x.notes }
+        : { ...emptyVolunteer, availability: [newSlot()] },
+    );
+    setCustomSkill('');
+  }, [open, id]);
+  const set = <K extends keyof VolunteerInput>(k: K, val: VolunteerInput[K]) => setV((p) => ({ ...p, [k]: val }));
+  const setSlot = (sid: string, patch: Partial<AvailabilitySlot>) => set('availability', v.availability.map((s) => (s.id === sid ? { ...s, ...patch } : s)));
+  const toggleSkill = (skill: string) => set('skills', v.skills.includes(skill) ? v.skills.filter((x) => x !== skill) : [...v.skills, skill]);
+  const skillOptions = [...new Set([...db.settings.skills, ...v.skills])];
+  const addCustom = () => {
+    const sk = customSkill.trim();
+    if (sk && !v.skills.some((x) => x.toLowerCase() === sk.toLowerCase())) set('skills', [...v.skills, sk]);
+    setCustomSkill('');
+  };
+  const submit = () => {
+    // Untouched blank rows are ignored rather than rejected.
+    const availability = v.availability
+      .filter((s) => !(s.type === 'date' && !s.date && !s.start && !s.end && !s.note))
+      .map((s) => (s.id.startsWith('new-') ? { ...s, id: '' } : s));
+    const saved = run(() => saveVolunteer({ ...v, availability }, id), id ? 'Volunteer updated.' : `${v.firstName.trim() || 'Volunteer'} added.`);
+    if (saved) {
+      onSaved?.(saved);
+      onClose();
+    }
+  };
+  return (
+    <FormModal open={open} onClose={onClose} title={id ? 'Edit Volunteer' : 'Add Volunteer'} onSubmit={submit} size="lg">
+      <div className="grid-2">
+        <Field label="First name" required>
+          <input className="input" value={v.firstName} onChange={(e) => set('firstName', e.target.value)} autoFocus />
+        </Field>
+        <Field label="Last name">
+          <input className="input" value={v.lastName} onChange={(e) => set('lastName', e.target.value)} />
+        </Field>
+        <Field label="Email">
+          <input className="input" type="email" value={v.email} onChange={(e) => set('email', e.target.value)} placeholder="name@example.com" />
+        </Field>
+        <Field label="Phone">
+          <input className="input" type="tel" value={v.phone} onChange={(e) => set('phone', e.target.value)} />
+        </Field>
+        <Field label="Preferred contact">
+          <select className="input" value={v.preferredContact} onChange={(e) => set('preferredContact', e.target.value as VolunteerInput['preferredContact'])}>
+            <option value="">No preference</option>
+            <option value="email">Email</option>
+            <option value="phone">Phone call</option>
+            <option value="text">Text message</option>
+          </select>
+        </Field>
+      </div>
+
+      <div className="field">
+        <span className="field-label">Skills</span>
+        <div className="chips">
+          {skillOptions.map((sk) => (
+            <button key={sk} type="button" className={`chip chip-btn ${v.skills.includes(sk) ? 'on' : ''}`} aria-pressed={v.skills.includes(sk)} onClick={() => toggleSkill(sk)}>
+              {sk}
+            </button>
+          ))}
+        </div>
+        <div className="inline-form">
+          <input
+            className="input"
+            value={customSkill}
+            onChange={(e) => setCustomSkill(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustom();
+              }
+            }}
+            placeholder="Other skill…"
+            aria-label="Other skill"
+          />
+          <button type="button" className="btn btn-ghost btn-sm" onClick={addCustom}>
+            <Plus size={15} /> Add skill
+          </button>
+        </div>
+      </div>
+
+      <div className="field">
+        <span className="field-label">Availability</span>
+        <div className="slot-list">
+          {v.availability.map((s, i) => (
+            <div key={s.id} className="slot-row">
+              <select className="input" value={s.type} onChange={(e) => setSlot(s.id, { type: e.target.value as AvailabilitySlot['type'] })} aria-label={`Availability ${i + 1} type`}>
+                <option value="date">On a date</option>
+                <option value="weekly">Every week</option>
+              </select>
+              {s.type === 'date' ? (
+                <input className="input" type="date" value={s.date} onChange={(e) => setSlot(s.id, { date: e.target.value })} aria-label={`Availability ${i + 1} date`} />
+              ) : (
+                <select className="input" value={s.weekday} onChange={(e) => setSlot(s.id, { weekday: Number(e.target.value) })} aria-label={`Availability ${i + 1} day`}>
+                  {WEEKDAYS.map((d, n) => (
+                    <option key={d} value={n}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input className="input" type="time" value={s.start} onChange={(e) => setSlot(s.id, { start: e.target.value })} aria-label={`Availability ${i + 1} from`} />
+              <span className="faint">to</span>
+              <input className="input" type="time" value={s.end} onChange={(e) => setSlot(s.id, { end: e.target.value })} aria-label={`Availability ${i + 1} until`} />
+              <input className="input slot-note" value={s.note} onChange={(e) => setSlot(s.id, { note: e.target.value })} placeholder="Note" aria-label={`Availability ${i + 1} note`} />
+              <button type="button" className="icon-btn" aria-label={`Remove availability ${i + 1}`} onClick={() => set('availability', v.availability.filter((x) => x.id !== s.id))}>
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => set('availability', [...v.availability, newSlot()])}>
+            <Plus size={15} /> Add availability
+          </button>
+          <span className="field-hint">Leave the times blank for all day.</span>
+        </div>
+      </div>
+
+      <Field label="Notes">
+        <textarea className="input" rows={3} value={v.notes} onChange={(e) => set('notes', e.target.value)} />
+      </Field>
     </FormModal>
   );
 }

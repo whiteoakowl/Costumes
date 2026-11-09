@@ -7,8 +7,9 @@ import { buildOverview, byId, castsFor, formatDate, formatDateTime, formatTime, 
 import { Card, DataTable, EmptyState, PageHeader, ProgressRing, SampleTag, SearchInput, Tabs, type Column } from '../components/ui';
 import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
-import { AttentionList, CastManager, CostumeListPanel, CostumeOverviewTable, ReadinessSummary } from '../components/casting';
-import { exportAllPerformanceAssignments, exportAssignments, exportCastLists } from '../lib/export';
+import { AttentionList, CastManager, CostumeListPanel, CostumeOverviewTable, PropOverviewTable, ReadinessSummary } from '../components/casting';
+import { AvailableVolunteersCard } from './Volunteers';
+import { exportAllPerformanceAssignments, exportAssignments, exportCastLists, exportPropAssignments } from '../lib/export';
 import type { PerformancePlan } from '../data/types';
 
 export function PerformancesPage() {
@@ -268,7 +269,10 @@ export function PerformanceDetailPage() {
                 <Download size={14} /> Cast lists
               </button>
               <button className="btn btn-ghost btn-sm" onClick={() => exportAssignments(db, 'performance', p.id, p.name)}>
-                <Download size={14} /> Assignments
+                <Download size={14} /> Costumes
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => exportPropAssignments(db, 'performance', p.id, p.name)}>
+                <Download size={14} /> Props
               </button>
             </>
           }
@@ -292,6 +296,9 @@ export function PerformanceDetailPage() {
       <CastManager ownerType="performance" ownerId={p.id} />
       <CostumeListPanel ownerType="performance" ownerId={p.id} />
       <CostumeOverviewTable ownerType="performance" ownerId={p.id} />
+      <CostumeListPanel ownerType="performance" ownerId={p.id} kind="prop" />
+      <PropOverviewTable ownerType="performance" ownerId={p.id} />
+      <AvailableVolunteersCard date={p.date} time={p.callTime || p.time} dressRehearsal={p.dressRehearsal} />
       <p className="small faint center">
         {ownerDancerIds(db, 'performance', p.id).length} dancers across {castsFor(db, 'performance', p.id).length} cast list(s).
       </p>

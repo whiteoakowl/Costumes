@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Download, Pencil, Plus, Shirt, Theater, Trash2, Users } from 'lucide-react';
+import { Download, Pencil, Plus, Shirt, Theater, Trash2, Users , Wand2} from 'lucide-react';
 import { useDb } from '../data/store';
 import { bulkUpdateDancers, deleteDancers } from '../data/actions';
-import { ageFromBirthday, dancerCostumes, dancerParticipation, formatDate, fullName, sortedDancers } from '../data/selectors';
+import { kindOf, ageFromBirthday, dancerCostumes, dancerParticipation, formatDate, fullName, sortedDancers } from '../data/selectors';
 import { Badge, BulkBar, Card, DataTable, EmptyState, PageHeader, SampleTag, SearchInput, StatusBadge, type Column } from '../components/ui';
 import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
@@ -201,10 +201,12 @@ export function DancerProfilePage() {
       </>
     );
   }
-  const costumes = dancerCostumes(db, d.id);
+  const allItems = dancerCostumes(db, d.id);
+  const costumes = allItems.filter((c) => kindOf(c.costume) === 'costume');
+  const props = allItems.filter((c) => kindOf(c.costume) === 'prop');
   const parts = dancerParticipation(db, d.id);
   const age = ageFromBirthday(d.birthday);
-  const uniqueCostumes = [...new Map(costumes.map((c) => [c.costume.id, c.costume])).values()];
+  const uniqueCostumes = [...new Map(allItems.map((c) => [c.costume.id, c.costume])).values()];
   const costumeNotes = db.costumeNotes
     .filter((n) => uniqueCostumes.some((c) => c.id === n.costumeId) && n.type !== 'general')
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -264,7 +266,7 @@ export function DancerProfilePage() {
         </Card>
 
         <div className="stack">
-          <Card title={`Assigned Costumes (${uniqueCostumes.length})`} icon={<Shirt size={18} />}>
+          <Card title={`Assigned Costumes (${new Set(costumes.map((c) => c.costume.id)).size})`} icon={<Shirt size={18} />}>
             {!costumes.length ? (
               <p className="faint pad">No costumes assigned yet. Assign costumes from a show or performance plan.</p>
             ) : (
@@ -314,6 +316,47 @@ export function DancerProfilePage() {
             )}
           </Card>
 
+          <Card title={`Assigned Props (${new Set(props.map((p) => p.costume.id)).size})`} icon={<Wand2 size={18} />}>
+            {!props.length ? (
+              <p className="faint pad">No props assigned. Assign props from a show or performance plan.</p>
+            ) : (
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Prop</th>
+                      <th>Show / Performance</th>
+                      <th>Cast</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {props.map((c, i) => (
+                      <tr key={i}>
+                        <td>
+                          <Link to={`/props/${c.costume.id}`} className="link-strong">
+                            {c.costume.name}
+                          </Link>
+                          <div className="small faint">
+                            {c.costume.inventoryNumber}
+                            {c.viaCast && ' · whole cast'}
+                          </div>
+                        </td>
+                        <td>
+                          <Link to={`/${c.ownerType === 'show' ? 'shows' : 'performances'}/${c.ownerId}`}>{c.ownerName}</Link>
+                        </td>
+                        <td>{c.castName}</td>
+                        <td>
+                          <StatusBadge costume={c.costume} compact />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
           <Card title="Shows & Performances" icon={<Theater size={18} />}>
             {!parts.length ? (
               <p className="faint pad">Not in any cast lists yet.</p>
@@ -336,7 +379,7 @@ export function DancerProfilePage() {
             )}
           </Card>
 
-          <Card title="Costume Notes for This Dancer's Costumes">
+          <Card title="Notes on This Dancer's Costumes & Props">
             {!costumeNotes.length ? (
               <p className="faint pad">No repair, sizing or accessory notes on their costumes.</p>
             ) : (
@@ -344,7 +387,7 @@ export function DancerProfilePage() {
                 {costumeNotes.map((n) => (
                   <li key={n.id}>
                     <div className="log-meta">
-                      <Link to={`/costumes/${n.costumeId}`}>{db.costumes.find((c) => c.id === n.costumeId)?.name}</Link> · {formatDate(n.createdAt)}
+                      <Link to={`${db.costumes.find((c) => c.id === n.costumeId)?.kind === 'prop' ? '/props' : '/costumes'}/${n.costumeId}`}>{db.costumes.find((c) => c.id === n.costumeId)?.name}</Link> · {formatDate(n.createdAt)}
                     </div>
                     <div>{n.text}</div>
                   </li>

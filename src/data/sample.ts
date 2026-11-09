@@ -182,6 +182,115 @@ export function buildSampleData(db: Database): Database {
   assign('performance', perf.id, mouse, pMat, chloe);
   // Harper in the matinee intentionally has no costume yet, to demonstrate the warnings.
 
+  addSamplePropsAndVolunteers(db);
   db.meta.sampleLoaded = true;
+  return db;
+}
+
+/**
+ * Sample props (linked to the sample shows / casts / dancers when they exist)
+ * and sample volunteers. Also used to upgrade databases created before props
+ * and volunteers existed.
+ */
+export function addSamplePropsAndVolunteers(db: Database): Database {
+  const t = nowIso();
+  const base = () => ({ id: newId(), createdAt: t, updatedAt: t, isSample: true as const });
+  const catId = (name: string) => db.categories.find((c) => c.name.toLowerCase() === name.toLowerCase())?.id ?? null;
+  const locId = (name: string) => db.storageLocations.find((l) => l.name === name)?.id ?? null;
+  const prefix = db.settings.propIdPrefix || 'PROP';
+  if (!db.meta.nextPropNumber) db.meta.nextPropNumber = 1;
+
+  const prop = (
+    name: string,
+    category: string,
+    description: string,
+    quantity: number,
+    location: string,
+    parts: [string, number][],
+    status: { reason: ProgressReason; note: string } | null = null,
+  ) => {
+    const rec: Costume = {
+      ...base(),
+      kind: 'prop',
+      inventoryNumber: `${prefix}-${String(db.meta.nextPropNumber++).padStart(4, '0')}`,
+      name,
+      categoryId: catId(category),
+      description,
+      size: '',
+      quantity,
+      dateAdded: dateFromToday(-200),
+      storageLocationId: locId(location),
+      status: status ? 'in_progress' : 'ready',
+      progressReason: status ? status.reason : null,
+      statusUpdatedAt: t,
+      repairNotes: status ? status.note : '',
+      notes: 'Sample prop.',
+    };
+    db.costumes.push(rec);
+    for (const [pName, qty] of parts) db.accessories.push({ ...base(), costumeId: rec.id, name: pName, quantity: qty });
+    db.costumeNotes.push({ ...base(), costumeId: rec.id, type: 'general', text: 'Prop added to inventory (sample data).' });
+    if (status) db.costumeNotes.push({ ...base(), costumeId: rec.id, type: 'repair', text: `Marked IN PROGRESS: ${status.note}` });
+    return rec.id;
+  };
+
+  const nutDoll = prop('Nutcracker Doll', 'Nutcracker', 'Painted wooden nutcracker for Clara, Act I', 1, 'Costume Closet A', []);
+  const giftBoxes = prop('Party Gift Boxes', 'Nutcracker', 'Wrapped gift boxes for the party scene', 6, 'Costume Bin 1', [['Ribbon bows', 6]]);
+  const sword = prop('Mouse King Sword', 'Nutcracker', 'Foam-core sword with silver paint', 2, 'Rack 1', [], { reason: 'repair', note: 'Handle wrap coming loose.' });
+  const candle = prop('Battery Candle', 'Nutcracker', 'LED candle with brass holder', 1, 'Costume Bin 1', [['AA batteries (spare set)', 0]]);
+  const umbrellas = prop('Spring Umbrellas', 'Spring Recital', 'Pastel parasols for the opening number', 5, 'Rack 1', []);
+  prop('Competition Chairs', 'Competition', 'Black folding chairs for contemporary piece', 4, 'Rack 1', []);
+
+  const show = (name: string) => db.shows.find((s) => s.isSample && s.name.toLowerCase().includes(name));
+  const dancer = (first: string) => db.dancers.find((d) => d.isSample && d.firstName === first)?.id ?? null;
+  const cast = (ownerId: string, name: string) => db.casts.find((c) => c.ownerId === ownerId && c.name === name)?.id ?? null;
+  const assign = (ownerType: OwnerType, ownerId: ID, costumeId: ID, castId: ID | null = null, dancerId: ID | null = null) => {
+    db.assignments.push({ ...base(), ownerType, ownerId, costumeId, castId, dancerId, notes: '' });
+  };
+
+  const nut = show('nutcracker');
+  if (nut) {
+    for (const p of [nutDoll, giftBoxes, sword, candle]) assign('show', nut.id, p);
+    const a = cast(nut.id, 'Cast A');
+    const b = cast(nut.id, 'Cast B');
+    if (a && dancer('Lily')) assign('show', nut.id, nutDoll, a, dancer('Lily'));
+    if (a && dancer('Mia')) assign('show', nut.id, sword, a, dancer('Mia'));
+    if (b) assign('show', nut.id, giftBoxes, b, null);
+  }
+  const spring = show('spring');
+  if (spring) {
+    assign('show', spring.id, umbrellas);
+    const sat = cast(spring.id, 'Saturday Cast');
+    if (sat) assign('show', spring.id, umbrellas, sat, null);
+  }
+  const perf = db.performances.find((p) => p.isSample && nut && p.showId === nut.id);
+  if (perf) {
+    for (const p of [nutDoll, giftBoxes, sword, candle]) assign('performance', perf.id, p);
+    const eve = cast(perf.id, 'Saturday Evening');
+    const mat = cast(perf.id, 'Sunday Matinee');
+    if (eve && dancer('Lily')) assign('performance', perf.id, nutDoll, eve, dancer('Lily'));
+    if (eve && dancer('Lily')) assign('performance', perf.id, candle, eve, dancer('Lily'));
+    if (eve && dancer('Mia')) assign('performance', perf.id, sword, eve, dancer('Mia'));
+    if (mat && dancer('Chloe')) assign('performance', perf.id, sword, mat, dancer('Chloe'));
+    if (mat && dancer('Emma')) assign('performance', perf.id, giftBoxes, mat, dancer('Emma'));
+  }
+
+  // Volunteers
+  const nutDate = nut?.startDate || dateFromToday(35);
+  const dress = perf?.dressRehearsal?.slice(0, 10) || dateFromToday(34);
+  const slot = (type: 'date' | 'weekly', dateOrWeekday: string | number, start: string, end: string, note = '') => ({
+    id: newId(),
+    type,
+    date: type === 'date' ? String(dateOrWeekday) : '',
+    weekday: type === 'weekly' ? Number(dateOrWeekday) : 0,
+    start,
+    end,
+    note,
+  });
+  const vol = (firstName: string, lastName: string, email: string, phone: string, preferredContact: 'email' | 'phone' | 'text', skills: string[], availability: ReturnType<typeof slot>[], notes: string) =>
+    db.volunteers.push({ ...base(), firstName, lastName, email, phone, preferredContact, skills, availability, notes });
+  vol('Dana', 'Whitfield', 'dana.whitfield@example.com', '(555) 201-4410', 'text', ['Sewing', 'Alterations'], [slot('weekly', 2, '18:00', '21:00', 'Tuesday sewing nights'), slot('date', dress, '15:00', '21:00')], 'Sample volunteer. Parent of Ava. Has her own serger.');
+  vol('Marcus', 'Lee', 'marcus.lee@example.com', '(555) 330-9182', 'email', ['Backstage / stage crew', 'Set building'], [slot('date', nutDate, '16:00', '22:00'), slot('weekly', 6, '', '', 'Most Saturdays')], 'Sample volunteer.');
+  vol('Priya', 'Shah', 'priya.shah@example.com', '(555) 744-0021', 'phone', ['Hair & makeup', 'Quick changes / dressing'], [slot('date', nutDate, '16:30', '21:30'), slot('date', dress, '15:30', '20:00')], 'Sample volunteer. Can do classical buns for up to 10 dancers.');
+  vol('Tom', 'Becker', 'tom.becker@example.com', '(555) 618-7735', 'email', ['Ushering', 'Ticketing', 'Photography'], [slot('weekly', 0, '12:00', '18:00')], 'Sample volunteer. Weekends only.');
   return db;
 }

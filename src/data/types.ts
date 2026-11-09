@@ -18,6 +18,12 @@
  *       assignment.castId   → whole cast wears it (when dancerId is null)
  *       assignment.dancerId → a specific dancer wears it
  *       neither             → costume is in the show/performance "costume list"
+ *
+ * Props share the inventory table with costumes (`costume.kind = 'prop'`), so
+ * they get the same IDs, status tracking, notes log, storage locations and
+ * show / cast / dancer assignments. Costume-only views filter on kind.
+ *
+ *   Volunteer       1─* AvailabilitySlot   (embedded list on the volunteer)
  */
 
 export type ID = string;
@@ -52,7 +58,11 @@ export type CostumeStatus = 'ready' | 'in_progress';
 /** Why a costume is IN PROGRESS. */
 export type ProgressReason = 'repair' | 'alteration' | 'cleaning' | 'replacement' | 'other';
 
+/** Inventory item type. Records without `kind` are costumes. */
+export type ItemKind = 'costume' | 'prop';
+
 export interface Costume extends Base {
+  kind?: ItemKind;
   inventoryNumber: string; // auto-generated, e.g. COS-0001
   name: string;
   categoryId: ID | null;
@@ -148,16 +158,41 @@ export interface CostumeAssignment extends Base {
   notes: string;
 }
 
+export interface AvailabilitySlot {
+  id: ID;
+  /** 'date' = a specific day; 'weekly' = every week on `weekday`. */
+  type: 'date' | 'weekly';
+  date: string; // YYYY-MM-DD when type = 'date'
+  weekday: number; // 0 = Sunday … 6 = Saturday when type = 'weekly'
+  start: string; // HH:MM or '' for all day
+  end: string; // HH:MM or ''
+  note: string;
+}
+
+export interface Volunteer extends Base {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  preferredContact: 'email' | 'phone' | 'text' | '';
+  skills: string[];
+  availability: AvailabilitySlot[];
+  notes: string;
+}
+
 export interface Settings {
   studioName: string;
   levels: string[];
   sizes: string[];
   costumeIdPrefix: string;
+  propIdPrefix: string;
+  skills: string[];
 }
 
 export interface Meta {
   schemaVersion: number;
   nextCostumeNumber: number;
+  nextPropNumber: number;
   sampleLoaded: boolean;
 }
 
@@ -175,6 +210,7 @@ export interface Database {
   casts: CastList[];
   castMembers: CastMembership[];
   assignments: CostumeAssignment[];
+  volunteers: Volunteer[];
 }
 
 export type TableName = Exclude<keyof Database, 'meta' | 'settings'>;

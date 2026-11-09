@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Database } from './types';
-import { buildSampleData } from './sample';
+import { buildSampleData, addSamplePropsAndVolunteers } from './sample';
 export { newId, nowIso, todayStr } from './ids';
 
 /**
@@ -15,18 +15,20 @@ export { newId, nowIso, todayStr } from './ids';
  */
 
 export const STORAGE_KEY = 'studio-costume-manager/v1';
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export class ValidationError extends Error {}
 
 export function emptyDatabase(): Database {
   return {
-    meta: { schemaVersion: SCHEMA_VERSION, nextCostumeNumber: 1, sampleLoaded: false },
+    meta: { schemaVersion: SCHEMA_VERSION, nextCostumeNumber: 1, nextPropNumber: 1, sampleLoaded: false },
     settings: {
       studioName: 'Your Dance Studio',
       levels: ['Pre-Ballet', 'Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5', 'Pre-Professional', 'Adult'],
       sizes: ['Child XS', 'Child S', 'Child M', 'Child L', 'Child XL', 'Adult XS', 'Adult S', 'Adult M', 'Adult L', 'Adult XL'],
       costumeIdPrefix: 'COS',
+      propIdPrefix: 'PROP',
+      skills: ['Sewing', 'Alterations', 'Hair & makeup', 'Backstage / stage crew', 'Quick changes / dressing', 'Set building', 'Ushering', 'Ticketing', 'Photography', 'Chaperone'],
     },
     dancers: [],
     categories: [],
@@ -39,6 +41,7 @@ export function emptyDatabase(): Database {
     casts: [],
     castMembers: [],
     assignments: [],
+    volunteers: [],
   };
 }
 
@@ -59,12 +62,20 @@ export function normalizeDatabase(raw: unknown): Database {
     const value = (input as Record<string, unknown>)[t];
     (db as unknown as Record<string, unknown>)[t] = Array.isArray(value) ? value : [];
   }
-  // Keep inventory numbers unique even if the counter in the file is stale.
-  const maxNumber = db.costumes.reduce((max, c) => {
-    const m = /(\d+)\s*$/.exec(c.inventoryNumber ?? '');
-    return m ? Math.max(max, Number(m[1])) : max;
-  }, 0);
-  db.meta.nextCostumeNumber = Math.max(db.meta.nextCostumeNumber || 1, maxNumber + 1);
+  // Keep inventory numbers unique even if the counters in the file are stale.
+  const maxNumber = (kind: 'costume' | 'prop') =>
+    db.costumes.reduce((max, c) => {
+      if ((c.kind ?? 'costume') !== kind) return max;
+      const m = /(\d+)\s*$/.exec(c.inventoryNumber ?? '');
+      return m ? Math.max(max, Number(m[1])) : max;
+    }, 0);
+  db.meta.nextCostumeNumber = Math.max(db.meta.nextCostumeNumber || 1, maxNumber('costume') + 1);
+  db.meta.nextPropNumber = Math.max(db.meta.nextPropNumber || 1, maxNumber('prop') + 1);
+  // Version 1 → 2 added props and volunteers: show their samples next to the existing samples.
+  const fromVersion = (input.meta?.schemaVersion as number | undefined) ?? 1;
+  if (fromVersion < 2 && db.dancers.some((d) => d.isSample) && !db.volunteers.length && !db.costumes.some((c) => c.kind === 'prop')) {
+    addSamplePropsAndVolunteers(db);
+  }
   db.meta.schemaVersion = SCHEMA_VERSION;
   return db;
 }

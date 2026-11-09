@@ -12,7 +12,8 @@ import { FeedbackProvider } from './components/feedback';
 import { EditorProvider } from './components/editors';
 import { Dashboard } from './pages/Dashboard';
 import { DancerProfilePage, DancersPage } from './pages/Dancers';
-import { CostumeDetailPage, CostumesPage } from './pages/Costumes';
+import { CostumeDetailPage, CostumesPage, PropsPage } from './pages/Costumes';
+import { VolunteerDetailPage, VolunteersPage } from './pages/Volunteers';
 import { ShowDetailPage, ShowsPage } from './pages/Shows';
 import { PerformanceDetailPage, PerformancesPage } from './pages/Performances';
 import { StorageDetailPage, StoragePage } from './pages/Storage';
@@ -32,6 +33,10 @@ function App() {
               <Route path="/dancers/:id" element={<DancerProfilePage />} />
               <Route path="/costumes" element={<CostumesPage />} />
               <Route path="/costumes/:id" element={<CostumeDetailPage />} />
+              <Route path="/props" element={<PropsPage />} />
+              <Route path="/props/:id" element={<CostumeDetailPage />} />
+              <Route path="/volunteers" element={<VolunteersPage />} />
+              <Route path="/volunteers/:id" element={<VolunteerDetailPage />} />
               <Route path="/shows" element={<ShowsPage />} />
               <Route path="/shows/:id" element={<ShowDetailPage />} />
               <Route path="/performances" element={<PerformancesPage />} />

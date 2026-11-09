@@ -36,6 +36,8 @@ export function Modal({ open, title, subtitle, onClose, children, footer, size =
     window.addEventListener('keydown', onKey);
     // Focus first field for quick data entry.
     const t = setTimeout(() => {
+      // Don't steal focus if the person has already started using the dialog.
+      if (ref.current?.contains(document.activeElement)) return;
       const el = ref.current?.querySelector<HTMLElement>('[autofocus], input:not([type=checkbox]):not([type=hidden]), select, textarea, button.btn-primary');
       el?.focus();
     }, 30);

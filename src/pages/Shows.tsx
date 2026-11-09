@@ -7,8 +7,8 @@ import { buildOverview, byId, formatDate, formatTime, ownerCostumeIds, ownerDanc
 import { Badge, Card, DataTable, EmptyState, PageHeader, SampleTag, SearchInput, type Column } from '../components/ui';
 import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
-import { AttentionList, CastManager, CostumeListPanel, CostumeOverviewTable, ReadinessSummary } from '../components/casting';
-import { exportAssignments, exportCastLists } from '../lib/export';
+import { AttentionList, CastManager, CostumeListPanel, CostumeOverviewTable, PropOverviewTable, ReadinessSummary } from '../components/casting';
+import { exportAssignments, exportCastLists, exportPropAssignments } from '../lib/export';
 import type { Show, ShowStatus } from '../data/types';
 
 export const SHOW_STATUS: Record<ShowStatus, { label: string; tone: 'info' | 'ready' | 'neutral' }> = {
@@ -57,6 +57,7 @@ export function ShowsPage() {
     { key: 'casts', header: 'Casts', render: (s) => castsFor(db, 'show', s.id).length, sortValue: (s) => castsFor(db, 'show', s.id).length, minor: true },
     { key: 'dancers', header: 'Dancers', render: (s) => ownerDancerIds(db, 'show', s.id).length, sortValue: (s) => ownerDancerIds(db, 'show', s.id).length },
     { key: 'costumes', header: 'Costumes', render: (s) => ownerCostumeIds(db, 'show', s.id).length, sortValue: (s) => ownerCostumeIds(db, 'show', s.id).length },
+    { key: 'props', header: 'Props', render: (s) => ownerCostumeIds(db, 'show', s.id, 'prop').length, sortValue: (s) => ownerCostumeIds(db, 'show', s.id, 'prop').length, minor: true },
     { key: 'status', header: 'Status', render: (s) => <Badge tone={SHOW_STATUS[s.status].tone}>{SHOW_STATUS[s.status].label}</Badge>, sortValue: (s) => ['planning', 'active', 'completed'].indexOf(s.status) },
     {
       key: 'act',
@@ -225,7 +226,10 @@ export function ShowDetailPage() {
                 <Download size={14} /> Cast lists
               </button>
               <button className="btn btn-ghost btn-sm" onClick={() => exportAssignments(db, 'show', s.id, s.name)}>
-                <Download size={14} /> Assignments
+                <Download size={14} /> Costumes
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => exportPropAssignments(db, 'show', s.id, s.name)}>
+                <Download size={14} /> Props
               </button>
             </>
           }
@@ -238,6 +242,8 @@ export function ShowDetailPage() {
       <CastManager ownerType="show" ownerId={s.id} />
       <CostumeListPanel ownerType="show" ownerId={s.id} />
       <CostumeOverviewTable ownerType="show" ownerId={s.id} />
+      <CostumeListPanel ownerType="show" ownerId={s.id} kind="prop" />
+      <PropOverviewTable ownerType="show" ownerId={s.id} />
 
       <Card
         title="Performance Plans for This Show"

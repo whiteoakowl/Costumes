@@ -108,7 +108,9 @@ export function ReassignDeleteDialog({
   options,
   noneLabel,
   onConfirm,
+  itemNoun = 'costume',
 }: {
+  itemNoun?: string;
   open: boolean;
   onClose: () => void;
   title: string;
@@ -148,16 +150,17 @@ export function ReassignDeleteDialog({
       {count > 0 ? (
         <>
           <p>
-            <strong>{count}</strong> costume{count === 1 ? ' is' : 's are'} currently assigned to <strong>{itemName}</strong>. Choose where {count === 1 ? 'it' : 'they'} should go:
+            <strong>{count}</strong> {itemNoun}
+            {count === 1 ? ' is' : 's are'} currently assigned to <strong>{itemName}</strong>. Choose where {count === 1 ? 'it' : 'they'} should go:
           </p>
-          <Field label={`Move costumes to ${noun}`}>
-            <SearchSelect ariaLabel={`Move costumes to ${noun}`} value={target} onChange={setTarget} options={options} noneLabel={noneLabel} />
+          <Field label={`Move ${itemNoun}s to ${noun}`}>
+            <SearchSelect ariaLabel={`Move ${itemNoun}s to ${noun}`} value={target} onChange={setTarget} options={options} noneLabel={noneLabel} />
           </Field>
-          <p className="small faint">Each costume's notes log will record the change.</p>
+          <p className="small faint">Each {itemNoun}'s notes log will record the change.</p>
         </>
       ) : (
         <p>
-          No costumes are assigned to <strong>{itemName}</strong>. It is safe to delete.
+          No {itemNoun}s are assigned to <strong>{itemName}</strong>. It is safe to delete.
         </p>
       )}
     </Modal>

@@ -1,5 +1,5 @@
-import type { Database, ID, OwnerType } from '../data/types';
-import { accessoriesFor, ageFromBirthday, buildOverview, byId, castsFor, formatDateTime, fullName, issueLabels } from '../data/selectors';
+import type { Database, ID, ItemKind, OwnerType } from '../data/types';
+import { accessoriesFor, ageFromBirthday, buildOverview, buildPropOverview, byId, castsFor, formatDateTime, fullName, issueLabels, itemsOf, slotLabel, sortedSlots, volunteerName } from '../data/selectors';
 import { progressReasonLabels } from '../data/actions';
 import { todayStr } from '../data/ids';
 
@@ -33,10 +33,11 @@ function slug(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export';
 }
 
-export function costumeInventoryCsv(db: Database, costumeIds?: ID[]) {
+export function costumeInventoryCsv(db: Database, costumeIds?: ID[], kind: ItemKind = 'costume') {
   const cats = byId(db.categories);
   const locs = byId(db.storageLocations);
-  const list = costumeIds ? db.costumes.filter((c) => costumeIds.includes(c.id)) : db.costumes;
+  const all = itemsOf(db, kind);
+  const list = costumeIds ? all.filter((c) => costumeIds.includes(c.id)) : all;
   const rows = [...list]
     .sort((a, b) => a.inventoryNumber.localeCompare(b.inventoryNumber))
     .map((c) => [
@@ -56,13 +57,51 @@ export function costumeInventoryCsv(db: Database, costumeIds?: ID[]) {
       c.isSample ? 'yes' : '',
     ]);
   return toCsv(
-    ['Costume ID', 'Costume Name', 'Category', 'Description', 'Size', 'Available Quantity', 'Accessories', 'Date Added', 'Storage Location', 'Status', 'Status Updated', 'Repair Notes', 'General Notes', 'Sample Data'],
+    kind === 'prop'
+      ? ['Prop ID', 'Prop Name', 'Category', 'Description', 'Size', 'Available Quantity', 'Parts', 'Date Added', 'Storage Location', 'Status', 'Status Updated', 'Repair Notes', 'General Notes', 'Sample Data']
+      : ['Costume ID', 'Costume Name', 'Category', 'Description', 'Size', 'Available Quantity', 'Accessories', 'Date Added', 'Storage Location', 'Status', 'Status Updated', 'Repair Notes', 'General Notes', 'Sample Data'],
     rows,
   );
 }
 
-export function exportCostumeInventory(db: Database, costumeIds?: ID[]) {
-  download(`costume-inventory-${todayStr()}.csv`, costumeInventoryCsv(db, costumeIds), 'text/csv;charset=utf-8');
+export function exportCostumeInventory(db: Database, costumeIds?: ID[], kind: ItemKind = 'costume') {
+  download(`${kind}-inventory-${todayStr()}.csv`, costumeInventoryCsv(db, costumeIds, kind), 'text/csv;charset=utf-8');
+}
+
+export function propAssignmentsCsv(db: Database, owners: { ownerType: OwnerType; ownerId: ID; name: string }[]) {
+  const rows: Cell[][] = [];
+  for (const o of owners) {
+    for (const r of buildPropOverview(db, o.ownerType, o.ownerId).rows) {
+      rows.push([
+        o.name,
+        r.prop.inventoryNumber,
+        r.prop.name,
+        r.target === 'dancer' ? r.dancerName : r.target === 'cast' ? `Whole cast` : 'Show / stage',
+        r.castName,
+        r.role,
+        r.parts.map((a) => `${a.name} x${a.quantity}`).join('; '),
+        r.prop.status === 'ready' ? 'READY' : 'IN PROGRESS',
+        r.issueDetails.join('; '),
+      ]);
+    }
+  }
+  return toCsv(['Show / Performance', 'Prop ID', 'Prop', 'Assigned To', 'Cast', 'Role', 'Parts', 'Status', 'Warnings'], rows);
+}
+
+export function exportPropAssignments(db: Database, ownerType: OwnerType, ownerId: ID, name: string) {
+  download(`${slug(name)}-prop-assignments-${todayStr()}.csv`, propAssignmentsCsv(db, [{ ownerType, ownerId, name }]), 'text/csv;charset=utf-8');
+}
+
+export function exportVolunteers(db: Database, ids?: ID[]) {
+  const list = ids ? db.volunteers.filter((v) => ids.includes(v.id)) : db.volunteers;
+  const rows = [...list]
+    .sort((a, b) => a.lastName.localeCompare(b.lastName))
+    .map((v) => [v.firstName, v.lastName, volunteerName(v), v.email, v.phone, v.preferredContact, v.skills.join('; '), sortedSlots(v).map((s) => slotLabel(s) + (s.note ? ` (${s.note})` : '')).join('; '), v.notes]);
+  download(
+    `volunteers-${todayStr()}.csv`,
+    toCsv(['First Name', 'Last Name', 'Full Name', 'Email', 'Phone', 'Preferred Contact', 'Skills', 'Availability', 'Notes'], rows),
+    'text/csv;charset=utf-8',
+  );
 }
 
 export function assignmentsCsv(db: Database, owners: { ownerType: OwnerType; ownerId: ID; name: string }[]) {

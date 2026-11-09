@@ -1,4 +1,4 @@
-import type { Accessory, CastList, Costume, CostumeAssignment, Database, Dancer, ID, OwnerType, PerformancePlan, Show } from './types';
+import type { Accessory, CastList, Costume, CostumeAssignment, Database, Dancer, ID, ItemKind, OwnerType, PerformancePlan, Show, Volunteer, AvailabilitySlot } from './types';
 import { todayStr } from './ids';
 
 /* Derived data. Everything is computed from the normalized tables, so any
@@ -15,6 +15,15 @@ export function ageFromBirthday(birthday: string, on = new Date()): number | nul
   let age = on.getFullYear() - y;
   if (on.getMonth() + 1 < m || (on.getMonth() + 1 === m && on.getDate() < d)) age -= 1;
   return age >= 0 ? age : null;
+}
+
+export function kindOf(c: Pick<Costume, 'kind'>): ItemKind {
+  return c.kind ?? 'costume';
+}
+
+/** Inventory items of one kind (costumes or props). */
+export function itemsOf(db: Database, kind: ItemKind): Costume[] {
+  return db.costumes.filter((c) => kindOf(c) === kind);
 }
 
 export function byId<T extends { id: ID }>(list: T[]): Map<ID, T> {
@@ -97,7 +106,7 @@ function norm(s: string) {
  */
 export function buildOverview(db: Database, ownerType: OwnerType, ownerId: ID): { rows: OverviewRow[]; readiness: Readiness } {
   const dancers = byId(db.dancers);
-  const costumes = byId(db.costumes);
+  const costumes = byId(itemsOf(db, 'costume'));
   const casts = castsFor(db, ownerType, ownerId);
   const assignments = db.assignments.filter((a) => a.ownerType === ownerType && a.ownerId === ownerId && costumes.has(a.costumeId));
   const rows: OverviewRow[] = [];
@@ -197,10 +206,150 @@ export function buildOverview(db: Database, ownerType: OwnerType, ownerId: ID): 
   };
 }
 
-/** Costumes in a show/performance's costume list (any assignment row counts). */
-export function ownerCostumeIds(db: Database, ownerType: OwnerType, ownerId: ID): ID[] {
+/** Items in a show/performance's costume or prop list (any assignment row counts). */
+export function ownerCostumeIds(db: Database, ownerType: OwnerType, ownerId: ID, kind: ItemKind = 'costume'): ID[] {
   const ids = new Set(db.assignments.filter((a) => a.ownerType === ownerType && a.ownerId === ownerId).map((a) => a.costumeId));
-  return db.costumes.filter((c) => ids.has(c.id)).map((c) => c.id);
+  return db.costumes.filter((c) => ids.has(c.id) && kindOf(c) === kind).map((c) => c.id);
+}
+
+/* ------------------------------------------------------- prop overview */
+
+export interface PropRow {
+  key: string;
+  prop: Costume;
+  assignment: CostumeAssignment;
+  castId: ID | null;
+  castName: string;
+  dancerId: ID | null;
+  dancerName: string;
+  role: string;
+  /** 'dancer' = carried by one dancer; 'cast' = shared by a whole cast; 'show' = on the list, not assigned to anyone (stage / set prop). */
+  target: 'dancer' | 'cast' | 'show';
+  parts: Accessory[];
+  issues: ('not_ready' | 'missing_part' | 'quantity_short')[];
+  issueDetails: string[];
+}
+
+export interface PropReadiness {
+  total: number;
+  ready: number;
+  needsWork: number;
+  warnings: number;
+  percent: number | null;
+}
+
+/**
+ * Props are optional, so (unlike costumes) dancers without one aren't flagged.
+ * One row per prop assignment, with warnings for props in progress, missing
+ * parts and more holders in a cast than the quantity on hand.
+ */
+export function buildPropOverview(db: Database, ownerType: OwnerType, ownerId: ID): { rows: PropRow[]; readiness: PropReadiness } {
+  const props = byId(itemsOf(db, 'prop'));
+  const dancers = byId(db.dancers);
+  const casts = byId(castsFor(db, ownerType, ownerId));
+  const assignments = db.assignments.filter((a) => a.ownerType === ownerType && a.ownerId === ownerId && props.has(a.costumeId));
+  const rows: PropRow[] = [];
+  const holders = new Map<string, Set<ID>>(); // `${castId}:${propId}` → dancers
+
+  for (const a of assignments) {
+    const prop = props.get(a.costumeId)!;
+    const cast = a.castId ? casts.get(a.castId) : undefined;
+    const dancer = a.dancerId ? dancers.get(a.dancerId) : undefined;
+    const target: PropRow['target'] = dancer ? 'dancer' : cast ? 'cast' : 'show';
+    // A prop that is only "on the list" but also assigned elsewhere doesn't need its own row.
+    if (target === 'show' && assignments.some((x) => x.costumeId === a.costumeId && (x.castId || x.dancerId))) continue;
+    const membership = dancer && cast ? db.castMembers.find((m) => m.castId === cast.id && m.dancerId === dancer.id) : undefined;
+    if (cast) {
+      const k = `${cast.id}:${prop.id}`;
+      if (!holders.has(k)) holders.set(k, new Set());
+      const set = holders.get(k)!;
+      if (dancer) set.add(dancer.id);
+      else db.castMembers.filter((m) => m.castId === cast.id).forEach((m) => set.add(m.dancerId));
+    }
+    rows.push({
+      key: a.id,
+      prop,
+      assignment: a,
+      castId: cast?.id ?? null,
+      castName: cast?.name ?? '',
+      dancerId: dancer?.id ?? null,
+      dancerName: dancer ? fullName(dancer) : '',
+      role: membership?.role ?? '',
+      target,
+      parts: accessoriesFor(db, prop.id),
+      issues: [],
+      issueDetails: [],
+    });
+  }
+
+  for (const r of rows) {
+    if (r.prop.status !== 'ready') {
+      r.issues.push('not_ready');
+      r.issueDetails.push(`Prop in progress${r.prop.repairNotes ? `: ${r.prop.repairNotes}` : ''}`);
+    }
+    const missing = r.parts.filter((p) => p.quantity <= 0);
+    if (missing.length) {
+      r.issues.push('missing_part');
+      r.issueDetails.push(missing.map((p) => `${p.name} missing`).join('; '));
+    }
+    const count = r.castId ? holders.get(`${r.castId}:${r.prop.id}`)?.size ?? 0 : 0;
+    if (count > r.prop.quantity) {
+      r.issues.push('quantity_short');
+      r.issueDetails.push(`${count} dancers in ${r.castName} but only ${r.prop.quantity} available`);
+    }
+  }
+  rows.sort((a, b) => a.castName.localeCompare(b.castName) || a.dancerName.localeCompare(b.dancerName) || a.prop.name.localeCompare(b.prop.name));
+
+  const unique = new Map(rows.map((r) => [r.prop.id, r.prop]));
+  const ready = [...unique.values()].filter((p) => p.status === 'ready').length;
+  return {
+    rows,
+    readiness: {
+      total: unique.size,
+      ready,
+      needsWork: unique.size - ready,
+      warnings: rows.filter((r) => r.issues.length).length,
+      percent: unique.size ? Math.round((ready / unique.size) * 100) : null,
+    },
+  };
+}
+
+/* --------------------------------------------------------- volunteers */
+
+export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+export function volunteerName(v: Pick<Volunteer, 'firstName' | 'lastName'>) {
+  return `${v.firstName} ${v.lastName}`.trim();
+}
+
+function weekdayOf(date: string) {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d).getDay();
+}
+
+/** Does this slot cover the given date (and time, if given)? */
+export function slotCovers(slot: AvailabilitySlot, date: string, time?: string) {
+  const dayOk = slot.type === 'date' ? slot.date === date : slot.weekday === weekdayOf(date);
+  if (!dayOk) return false;
+  if (!time) return true;
+  return (!slot.start || slot.start <= time) && (!slot.end || time <= slot.end);
+}
+
+export function availableSlots(v: Volunteer, date: string, time?: string) {
+  if (!date) return [];
+  return v.availability.filter((s) => slotCovers(s, date, time));
+}
+
+export function slotLabel(s: AvailabilitySlot) {
+  const day = s.type === 'date' ? formatDate(s.date) : `Every ${WEEKDAYS[s.weekday]}`;
+  const time = s.start || s.end ? `${s.start ? formatTime(s.start) : '…'} – ${s.end ? formatTime(s.end) : '…'}` : 'All day';
+  return `${day} · ${time}`;
+}
+
+/** Slots sorted: upcoming dated slots first (by date), then weekly, then past dates. */
+export function sortedSlots(v: Volunteer, today = todayStr()) {
+  const rank = (s: AvailabilitySlot) => (s.type === 'date' ? (s.date >= today ? 0 : 2) : 1);
+  return [...v.availability].sort((a, b) => rank(a) - rank(b) || (a.type === 'date' ? a.date.localeCompare(b.date) : a.weekday - b.weekday) || a.start.localeCompare(b.start));
 }
 
 export function ownerDancerIds(db: Database, ownerType: OwnerType, ownerId: ID): ID[] {
@@ -277,8 +426,11 @@ export function costumeUsage(db: Database, costumeId: ID) {
     const k = `${a.ownerType}:${a.ownerId}`;
     if (!seen.has(k)) seen.set(k, { ownerType: a.ownerType, ownerId: a.ownerId, name: ownerName(db, a.ownerType, a.ownerId), dancers: 0 });
   }
+  const isProp = db.costumes.find((c) => c.id === costumeId)?.kind === 'prop';
   for (const entry of seen.values()) {
-    entry.dancers = buildOverview(db, entry.ownerType, entry.ownerId).rows.filter((r) => r.costume?.id === costumeId).length;
+    entry.dancers = isProp
+      ? buildPropOverview(db, entry.ownerType, entry.ownerId).rows.filter((r) => r.prop.id === costumeId && r.target !== 'show').length
+      : buildOverview(db, entry.ownerType, entry.ownerId).rows.filter((r) => r.costume?.id === costumeId).length;
   }
   return [...seen.values()];
 }

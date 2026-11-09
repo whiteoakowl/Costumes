@@ -303,7 +303,7 @@ h4 {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 .stat-card {
@@ -1711,10 +1711,15 @@ input[type='checkbox'] {
 
 /* ------------------------------------------------------------ responsive */
 
-@media (max-width: 1280px) {
+@media (max-width: 1100px) {
   .stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+.tiny-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  padding: 1px 7px;
 }
 @media (max-width: 1100px) {
   .dash-grid {
@@ -1814,5 +1819,78 @@ input[type='checkbox'] {
   }
   .stat-value {
     font-size: 26px;
+  }
+}
+
+/* ------------------------------------------------- props & volunteers */
+
+.chip-prop {
+  background: var(--plum-bg);
+  color: var(--plum);
+}
+.warn-text.inline {
+  display: inline;
+}
+.slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.slot-row {
+  display: grid;
+  grid-template-columns: 130px 150px 110px auto 110px minmax(80px, 1fr) 32px;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+.skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.skill-chips .chip {
+  font-size: 12px;
+  padding: 2px 9px;
+}
+.avail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.avail-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.avail-list li.past {
+  opacity: 0.5;
+}
+.contact-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.contact-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 700px) {
+  .slot-row {
+    grid-template-columns: 1fr 1fr;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .slot-row > span.faint {
+    display: none;
+  }
+  .slot-row .slot-note {
+    grid-column: 1 / -1;
   }
 }

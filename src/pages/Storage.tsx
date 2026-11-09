@@ -3,8 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MapPin, Pencil, Plus, Shirt, Trash2, Warehouse } from 'lucide-react';
 import { useDb } from '../data/store';
 import { deleteLocation } from '../data/actions';
-import { accessoriesFor, byId, sortedLocations } from '../data/selectors';
-import { BulkBar, Card, DataTable, EmptyState, PageHeader, SampleTag, SearchInput, StatusBadge, type Column } from '../components/ui';
+import { accessoriesFor, byId, kindOf, sortedLocations } from '../data/selectors';
+import { itemLabels } from '../lib/labels';
+import { Badge, BulkBar, Card, DataTable, EmptyState, PageHeader, SampleTag, SearchInput, StatusBadge, type Column } from '../components/ui';
 import { useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
 import { MoveCostumesDialog, ReassignDeleteDialog } from '../components/dialogs';
@@ -25,6 +26,7 @@ function useDeleteLocation() {
       itemName={target?.name ?? ''}
       count={target ? db.costumes.filter((c) => c.storageLocationId === target.id).length : 0}
       noun="location"
+      itemNoun="item"
       options={options.filter((o) => o.value !== target?.id)}
       noneLabel="Leave unassigned"
       onConfirm={(to) => {
@@ -70,7 +72,7 @@ export function StoragePage() {
     { key: 'unit', header: 'Room / Rack / Bin', render: (l) => l.unitNumber || <span className="faint">—</span>, sortValue: (l) => l.unitNumber },
     { key: 'desc', header: 'Description', render: (l) => <span className="small">{l.description}</span>, minor: true },
     { key: 'notes', header: 'Notes', render: (l) => <span className="small faint">{l.notes}</span>, minor: true },
-    { key: 'count', header: 'Costumes', render: (l) => <Link to={`/storage/${l.id}`}>{counts.get(l.id) ?? 0}</Link>, sortValue: (l) => counts.get(l.id) ?? 0 },
+    { key: 'count', header: 'Items stored', render: (l) => <Link to={`/storage/${l.id}`}>{counts.get(l.id) ?? 0}</Link>, sortValue: (l) => counts.get(l.id) ?? 0 },
     {
       key: 'act',
       header: '',
@@ -91,7 +93,7 @@ export function StoragePage() {
     <>
       <PageHeader
         title="Storage Locations"
-        subtitle="Where every costume physically lives"
+        subtitle="Where every costume and prop physically lives"
         actions={
           <button className="btn btn-primary" onClick={() => ed.editLocation()}>
             <Plus size={16} /> Add location
@@ -114,7 +116,7 @@ export function StoragePage() {
             <MapPin size={20} />
             <div>
               <strong>Unassigned</strong>
-              <span className="small faint">Costumes without a location</span>
+              <span className="small faint">Costumes & props without a location</span>
             </div>
             <span className="loc-count">{unassigned}</span>
           </Link>
@@ -172,6 +174,8 @@ export function StorageDetailPage() {
   }
   const cats = byId(db.categories);
   const costumes = db.costumes.filter((c) => c.storageLocationId === l.id && (!q || `${c.name} ${c.inventoryNumber}`.toLowerCase().includes(q.toLowerCase())));
+  const stored = db.costumes.filter((c) => c.storageLocationId === l.id);
+  const storedProps = stored.filter((c) => c.kind === 'prop').length;
   const ids = [...selected].filter((x) => costumes.some((c) => c.id === x));
   const columns: Column<Costume>[] = [
     { key: 'id', header: 'ID', render: (c) => <span className="mono small">{c.inventoryNumber}</span>, sortValue: (c) => c.inventoryNumber },
@@ -179,14 +183,15 @@ export function StorageDetailPage() {
       key: 'name',
       header: 'Costume',
       render: (c) => (
-        <Link to={`/costumes/${c.id}`} className="link-strong">
+        <Link to={`${itemLabels[kindOf(c)].base}/${c.id}`} className="link-strong">
           {c.name}
         </Link>
       ),
       sortValue: (c) => c.name,
     },
+    { key: 'type', header: 'Type', render: (c) => (kindOf(c) === 'prop' ? <Badge tone="rose">Prop</Badge> : <Badge>Costume</Badge>), sortValue: (c) => kindOf(c) },
     { key: 'cat', header: 'Category', render: (c) => (c.categoryId ? cats.get(c.categoryId)?.name : <span className="faint">—</span>), sortValue: (c) => cats.get(c.categoryId ?? '')?.name ?? '', minor: true },
-    { key: 'size', header: 'Size', render: (c) => c.size || '—', sortValue: (c) => c.size },
+    { key: 'size', header: 'Size', render: (c) => (kindOf(c) === 'prop' ? <span className="faint">—</span> : c.size || '—'), sortValue: (c) => c.size, minor: true },
     { key: 'qty', header: 'Qty', render: (c) => c.quantity, sortValue: (c) => c.quantity },
     { key: 'acc', header: 'Accessories', render: (c) => <span className="small">{accessoriesFor(db, c.id).map((a) => a.name).join(', ') || '—'}</span>, minor: true },
     { key: 'status', header: 'Status', render: (c) => <StatusBadge costume={c} compact />, sortValue: (c) => c.status },
@@ -201,7 +206,7 @@ export function StorageDetailPage() {
             {l.name} <SampleTag show={l.isSample} />
           </>
         }
-        subtitle={[l.unitNumber, `${db.costumes.filter((c) => c.storageLocationId === l.id).length} costumes stored here`].filter(Boolean).join(' · ')}
+        subtitle={[l.unitNumber, `${stored.length - storedProps} costumes · ${storedProps} props stored here`].filter(Boolean).join(' · ')}
         actions={
           <>
             <button className="btn btn-ghost danger" onClick={() => del.ask(l, () => navigate('/storage'))}>
@@ -229,7 +234,7 @@ export function StorageDetailPage() {
             <dd className="prewrap">{l.notes || '—'}</dd>
           </dl>
         </Card>
-        <Card title="Costumes in This Location" icon={<Shirt size={18} />}>
+        <Card title="Costumes & Props in This Location" icon={<Shirt size={18} />}>
           <div className="toolbar">
             <SearchInput value={q} onChange={setQ} placeholder="Search costumes here…" />
           </div>
@@ -245,7 +250,7 @@ export function StorageDetailPage() {
             selected={selected}
             onSelectedChange={setSelected}
             initialSort={{ key: 'name', dir: 'asc' }}
-            empty={<EmptyState icon={<Shirt size={26} />} title="Nothing stored here yet" message="Assign costumes to this location from the Costumes page or a costume's detail page." />}
+            empty={<EmptyState icon={<Shirt size={26} />} title="Nothing stored here yet" message="Assign costumes or props to this location from the Costumes or Props page." />}
           />
         </Card>
       </div>
