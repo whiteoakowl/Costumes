@@ -1,5 +1,6 @@
 import type { Accessory, CastList, Costume, CostumeAssignment, Database, Dancer, ID, ItemKind, OwnerType, PerformancePlan, Show, Volunteer, AvailabilitySlot } from './types';
 import { todayStr } from './ids';
+import { fmtClock, fmtDate, fmtDateTime } from './time';
 
 /* Derived data. Everything is computed from the normalized tables, so any
    change anywhere is reflected everywhere automatically. */
@@ -8,12 +9,14 @@ export function fullName(d: Pick<Dancer, 'firstName' | 'lastName'>) {
   return `${d.firstName} ${d.lastName}`.trim();
 }
 
-export function ageFromBirthday(birthday: string, on = new Date()): number | null {
+export function ageFromBirthday(birthday: string, on?: Date): number | null {
   if (!birthday) return null;
   const [y, m, d] = birthday.split('-').map(Number);
   if (!y || !m || !d) return null;
-  let age = on.getFullYear() - y;
-  if (on.getMonth() + 1 < m || (on.getMonth() + 1 === m && on.getDate() < d)) age -= 1;
+  // "Today" in New York unless a specific date is given.
+  const [ty, tm, td] = (on ? `${on.getFullYear()}-${on.getMonth() + 1}-${on.getDate()}` : todayStr()).split('-').map(Number);
+  let age = ty - y;
+  if (tm < m || (tm === m && td < d)) age -= 1;
   return age >= 0 ? age : null;
 }
 
@@ -438,28 +441,13 @@ export function costumeUsage(db: Database, costumeId: ID) {
 /* ---------------------------------------------------------- formatting */
 
 export function formatDate(value: string) {
-  if (!value) return '';
-  if (value.length > 10) {
-    // Full timestamp: show the local calendar date.
-    const dt = new Date(value);
-    if (!Number.isNaN(dt.getTime())) return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-  const [y, m, d] = value.slice(0, 10).split('-').map(Number);
-  if (!y) return value;
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return fmtDate(value);
 }
 
 export function formatDateTime(iso: string) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return fmtDateTime(iso);
 }
 
 export function formatTime(hhmm: string) {
-  if (!hhmm) return '';
-  const [h, m] = hhmm.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m || 0, 0, 0);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return fmtClock(hhmm);
 }

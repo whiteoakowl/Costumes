@@ -1,5 +1,6 @@
 import type { AttendanceStatus, Database, DanceClass, ID, StaffMember, UserAccount } from './types';
 import { newId, nowIso, todayStr } from './ids';
+import { fmtDate } from './time';
 import { addDays, durationHours, ensureOwnerAccount, occurrencesBetween, weekdayOf } from './studio';
 
 /**
@@ -178,8 +179,8 @@ export function addSampleStudio(db: Database): Database {
   db.sessionChanges.push({ ...base(), classId: jazz2.id, date: jazzDate, cancelled: false, newDate: '', newStartTime: '', newEndTime: '', newClassroomId: null, substituteId: nina, reason: 'James is choreographing for competition' });
   const familiesOf = (c: DanceClass) => [...new Set(db.enrollments.filter((e) => e.classId === c.id && e.status === 'enrolled').map((e) => db.dancers.find((d) => d.id === e.dancerId)?.familyId).filter(Boolean) as ID[])];
   db.notices.push(
-    { ...base(), title: `Tap 3 cancelled ${tapDate}`, body: 'Tap 3 is cancelled next week: teacher at a tap conference. A makeup class will be scheduled.', kind: 'cancellation', staffIds: [rachel], familyIds: familiesOf(tap3), classId: tap3.id, author: 'Studio Owner', readBy: [] },
-    { ...base(), title: `Jazz 2 substitute ${jazzDate}`, body: 'Nina Patel will teach Jazz 2 next week.', kind: 'schedule', staffIds: [james, nina, olivia], familyIds: familiesOf(jazz2), classId: jazz2.id, author: 'Studio Owner', readBy: [] },
+    { ...base(), title: `Tap 3 cancelled ${fmtDate(tapDate)}`, body: 'Tap 3 is cancelled next week: teacher at a tap conference. A makeup class will be scheduled.', kind: 'cancellation', staffIds: [rachel], familyIds: familiesOf(tap3), classId: tap3.id, author: 'Studio Owner', readBy: [] },
+    { ...base(), title: `Jazz 2 substitute ${fmtDate(jazzDate)}`, body: 'Nina Patel will teach Jazz 2 next week.', kind: 'schedule', staffIds: [james, nina, olivia], familyIds: familiesOf(jazz2), classId: jazz2.id, author: 'Studio Owner', readBy: [] },
   );
 
   /* attendance for the last three weeks */

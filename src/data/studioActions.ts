@@ -1,6 +1,7 @@
 import { commit, ValidationError } from './store';
 import { newId, nowIso, todayStr } from './ids';
 import { actorName } from '../lib/session';
+import { fmtClock, fmtDate, fmtWeekdayDate } from './time';
 import {
   WEEKDAY_NAMES,
   classConflicts,
@@ -87,15 +88,11 @@ function noticeForClass(db: Database, cls: DanceClass, kind: Notice['kind'], tit
 }
 
 function prettyDate(d: string) {
-  const [y, m, day] = d.split('-').map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  return fmtWeekdayDate(d);
 }
 
 function prettyTime(t: string) {
-  const [h, m] = t.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return fmtClock(t);
 }
 
 /* ------------------------------------------------------------ accounts */
@@ -574,7 +571,7 @@ export function saveStudioEvent(input: StudioEventInput, id?: ID): ID {
       const when = startDate === endDate ? prettyDate(startDate) : `${prettyDate(startDate)} – ${prettyDate(endDate)}`;
       for (const c of affected.values()) noticeForClass(db, c, 'cancellation', `${c.name} cancelled: ${title}`, `${c.name} will not meet ${when} (${title}).`);
     }
-    logActivity(db, id ? 'Calendar entry updated' : 'Calendar entry added', `${title} (${startDate}${endDate !== startDate ? ` – ${endDate}` : ''})`, '/calendar');
+    logActivity(db, id ? 'Calendar entry updated' : 'Calendar entry added', `${title} (${fmtDate(startDate)}${endDate !== startDate ? ` – ${fmtDate(endDate)}` : ''})`, '/calendar');
     return eid!;
   });
 }
@@ -605,7 +602,7 @@ export function cancelSession(classId: ID, originalDate: string, reason: string)
     ch.updatedAt = nowIso();
     const actual = ch.newDate || originalDate;
     noticeForClass(db, c, 'cancellation', `${c.name} cancelled ${prettyDate(actual)}`, `${c.name} on ${prettyDate(actual)} is cancelled${reason.trim() ? `: ${reason.trim()}` : '.'}`, [ch.substituteId]);
-    logActivity(db, 'Class cancelled', `${c.name} on ${actual}${reason.trim() ? ` — ${reason.trim()}` : ''}`, '/calendar');
+    logActivity(db, 'Class cancelled', `${c.name} on ${fmtDate(actual)}${reason.trim() ? ` — ${reason.trim()}` : ''}`, '/calendar');
   });
 }
 
@@ -617,7 +614,7 @@ export function restoreSession(classId: ID, originalDate: string) {
     if (!ch) return;
     db.sessionChanges = db.sessionChanges.filter((x) => x !== ch);
     noticeForClass(db, c, 'schedule', `${c.name} back to its regular time ${prettyDate(originalDate)}`, `${c.name} meets as usual on ${prettyDate(originalDate)}, ${prettyTime(c.startTime)}–${prettyTime(c.endTime)}.`);
-    logActivity(db, 'Class restored', `${c.name} on ${originalDate}`, '/calendar');
+    logActivity(db, 'Class restored', `${c.name} on ${fmtDate(originalDate)}`, '/calendar');
   });
 }
 
@@ -675,7 +672,7 @@ export function rescheduleSession(classId: ID, originalDate: string, input: Resc
       `${c.name} (normally ${prettyDate(originalDate)}) will meet ${prettyDate(input.newDate)}, ${prettyTime(input.newStartTime)}–${prettyTime(input.newEndTime)}${room ? ` in ${room}` : ''}${sub ? `, taught by ${sub}` : ''}.${input.reason.trim() ? ` ${input.reason.trim()}` : ''}`,
       [input.substituteId],
     );
-    logActivity(db, conflicts.length ? 'Class rescheduled (conflict overridden)' : 'Class rescheduled', `${c.name}: ${originalDate} → ${input.newDate} ${input.newStartTime}${sub ? ` (sub: ${sub})` : ''}`, '/calendar');
+    logActivity(db, conflicts.length ? 'Class rescheduled (conflict overridden)' : 'Class rescheduled', `${c.name}: ${fmtDate(originalDate)} → ${fmtDate(input.newDate)} ${fmtClock(input.newStartTime)}${sub ? ` (sub: ${sub})` : ''}`, '/calendar');
   });
 }
 
@@ -700,7 +697,7 @@ export function saveAttendance(classId: ID, sessionDate: string, rows: { dancerI
         changed += 1;
       }
     }
-    if (changed) logActivity(db, 'Attendance taken', `${c.name} on ${sessionDate} (${rows.length} dancers)`, `/attendance?class=${classId}&date=${sessionDate}`);
+    if (changed) logActivity(db, 'Attendance taken', `${c.name} on ${fmtDate(sessionDate)} (${rows.length} dancers)`, `/attendance?class=${classId}&date=${sessionDate}`);
     return changed;
   });
 }
@@ -740,7 +737,7 @@ export function submitHours(input: TimeEntryInput): ID {
       history: [{ at: nowIso(), by: who, change: `Submitted ${hours} h` }],
     };
     db.timeEntries.push(rec);
-    logActivity(db, 'Hours submitted', `${staffName(s)}: ${hours} h on ${input.date}`, '/hours');
+    logActivity(db, 'Hours submitted', `${staffName(s)}: ${hours} h on ${fmtDate(input.date)}`, '/hours');
     return rec.id;
   });
 }
@@ -768,7 +765,7 @@ export function editTimeEntry(id: ID, patch: Partial<Pick<TimeEntry, 'hours' | '
     if (e.status === 'approved' && !reason.trim()) throw new ValidationError('Give a reason for changing approved hours.');
     const changes: string[] = [];
     if (patch.hours !== undefined && checkHours(Number(patch.hours)) !== e.hours) changes.push(`hours ${e.hours} → ${checkHours(Number(patch.hours))}`);
-    if (patch.date !== undefined && patch.date !== e.date) changes.push(`date ${e.date} → ${date(patch.date, 'Date', false)}`);
+    if (patch.date !== undefined && patch.date !== e.date) changes.push(`date ${fmtDate(e.date)} → ${fmtDate(date(patch.date, 'Date', false))}`);
     if (patch.kind !== undefined && patch.kind !== e.kind) changes.push(`type ${e.kind} → ${patch.kind}`);
     if (patch.rate !== undefined && Number(patch.rate) !== e.rate) {
       if (Number(patch.rate) < 0) throw new ValidationError('Rate cannot be negative.');
@@ -779,7 +776,7 @@ export function editTimeEntry(id: ID, patch: Partial<Pick<TimeEntry, 'hours' | '
     if (!changes.length) return;
     Object.assign(e, patch, { hours: patch.hours !== undefined ? checkHours(Number(patch.hours)) : e.hours, rate: patch.rate !== undefined ? Number(patch.rate) : e.rate, description: patch.description?.trim() ?? e.description, updatedAt: nowIso() });
     e.history.push({ at: nowIso(), by: actorName(), change: `Edited: ${changes.join(', ')}${reason.trim() ? ` — ${reason.trim()}` : ''}` });
-    logActivity(db, e.status === 'approved' ? 'Approved hours adjusted' : 'Hours edited', `${staffName(staffById(db, e.staffId))} ${e.date}: ${changes.join(', ')}`, '/hours');
+    logActivity(db, e.status === 'approved' ? 'Approved hours adjusted' : 'Hours edited', `${staffName(staffById(db, e.staffId))} ${fmtDate(e.date)}: ${changes.join(', ')}`, '/hours');
   });
 }
 
@@ -788,7 +785,7 @@ export function deleteTimeEntry(id: ID) {
     const e = find(db.timeEntries, id, 'This time entry');
     if (e.status === 'approved') throw new ValidationError('Approved hours cannot be deleted. Edit them (with a reason) instead.');
     db.timeEntries = db.timeEntries.filter((x) => x.id !== id);
-    logActivity(db, 'Hours deleted', `${staffName(staffById(db, e.staffId))} ${e.date} ${e.hours} h`, '/hours');
+    logActivity(db, 'Hours deleted', `${staffName(staffById(db, e.staffId))} ${fmtDate(e.date)} ${e.hours} h`, '/hours');
   });
 }
 
@@ -832,7 +829,7 @@ export function generateClassHours(from: string, to: string, staffId?: ID): numb
         created += 1;
       }
     }
-    logActivity(db, 'Hours generated from schedule', `${created} entries (${from} – ${last})`, '/hours');
+    logActivity(db, 'Hours generated from schedule', `${created} entries (${fmtDate(from)} – ${fmtDate(last)})`, '/hours');
     return created;
   });
 }

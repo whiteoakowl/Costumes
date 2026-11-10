@@ -1,5 +1,6 @@
 import type { Costume, Database, ID, NoteType, ProgressReason, WorkOrder } from './types';
 import { newId, nowIso } from './ids';
+import { fmtDate, fmtDateTime, nyNowLocal } from './time';
 
 /*
  * Repair / cleaning work orders. These helpers work directly on a database
@@ -37,9 +38,7 @@ export function noteTypeFor(type: ProgressReason): NoteType {
 
 /** Current local date/time as 'YYYY-MM-DDTHH:MM' (the format of datetime-local inputs). */
 export function localNow(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  return nyNowLocal();
 }
 
 export function isOpenOrder(w: Pick<WorkOrder, 'status'>) {
@@ -62,10 +61,7 @@ export function logNote(db: Database, costumeId: ID, type: NoteType, text: strin
 }
 
 function prettyLocal(dt: string) {
-  if (!dt) return '';
-  const d = new Date(dt);
-  if (Number.isNaN(d.getTime())) return dt;
-  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', ...(dt.length > 10 ? { hour: 'numeric', minute: '2-digit' } : {}) });
+  return dt.length > 10 ? fmtDateTime(dt) : fmtDate(dt);
 }
 
 export interface WorkFields {

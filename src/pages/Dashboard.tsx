@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { isOpenOrder, workTypeLabels } from '../data/workflow';
 import { WorkOrderDialog, isOverdue } from '../components/work';
 import { StudioOverview } from './StudioOverview';
+import { todayHeading } from '../data/time';
 import { Link } from 'react-router-dom';
 import { CalendarHeart, CheckCircle2, Clock, Plus, Scissors, Shirt, Sparkles, Theater, Users, Warehouse, Wrench , HandHeart, Wand2} from 'lucide-react';
 import { useDb } from '../data/store';
@@ -41,7 +42,7 @@ export function Dashboard() {
 
   const shows = byId(db.shows);
   const locs = byId(db.storageLocations);
-  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const today = todayHeading();
 
   return (
     <>

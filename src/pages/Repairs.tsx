@@ -8,6 +8,7 @@ import { Card, EmptyState, PageHeader, SearchInput, StatCard, Tabs } from '../co
 import { WorkOrderDialog, WorkOrderTable, isOverdue } from '../components/work';
 import { itemLabels } from '../lib/labels';
 import { openPrint } from './Print';
+import { nyDayOf } from '../data/time';
 import type { NoteType, ProgressReason } from '../data/types';
 
 type Tab = 'open' | 'done' | 'log';
@@ -257,10 +258,7 @@ function ActivityLog() {
   );
 }
 
-/** Local calendar day of an ISO timestamp. */
+/** New York calendar day of an ISO timestamp. */
 export function toLocalDay(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return nyDayOf(iso);
 }

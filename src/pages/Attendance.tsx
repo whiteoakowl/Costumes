@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCheck, ClipboardCheck, Download, Lock, Save } from 'lucide-react';
 import { useDb } from '../data/store';
 import { saveAttendance } from '../data/studioActions';
-import { formatDate, fullName } from '../data/selectors';
+import { formatDate, formatTime, fullName } from '../data/selectors';
 import { addDays, attendanceLabels, attendanceRate, enrolledDancerIds, occurrencesBetween, staffClassIds, staffName } from '../data/studio';
 import { Card, EmptyState, PageHeader, SearchSelect, Tabs } from '../components/ui';
 import { useRun } from '../components/feedback';
@@ -124,7 +124,7 @@ function TakeAttendance() {
             <div>
               <h3>{cls.name}</h3>
               <div className="small faint">
-                {occ ? `${formatDate(occ.date)} · ${occ.start}–${occ.end} · ${staffName(db.staff.find((s) => s.id === occ.teacherId))}` : formatDate(date)}
+                {occ ? `${formatDate(occ.date)} · ${formatTime(occ.start)}–${formatTime(occ.end)} · ${staffName(db.staff.find((s) => s.id === occ.teacherId))}` : formatDate(date)}
                 {occ?.cancelled && <span className="bad-text"> · Cancelled: {occ.cancelReason}</span>}
               </div>
               {taken && <div className="small">Attendance saved{existing[0]?.takenBy ? ` by ${existing[0].takenBy}` : ''}. You can update it.</div>}
@@ -227,7 +227,7 @@ function AttendanceRecords() {
         ['Date', 'Class', 'Teacher', 'Dancer', 'Status', 'Note', 'Recorded by'],
         records.map((r) => {
           const c = classes.get(r.classId);
-          return [r.date, c?.name ?? 'Deleted class', staffName(db.staff.find((s) => s.id === c?.teacherId)), dancers.get(r.dancerId) ? fullName(dancers.get(r.dancerId)!) : 'Removed dancer', attendanceLabels[r.status], r.note, r.takenBy];
+          return [formatDate(r.date), c?.name ?? 'Deleted class', staffName(db.staff.find((s) => s.id === c?.teacherId)), dancers.get(r.dancerId) ? fullName(dancers.get(r.dancerId)!) : 'Removed dancer', attendanceLabels[r.status], r.note, r.takenBy];
         }),
       ),
       'text/csv;charset=utf-8',

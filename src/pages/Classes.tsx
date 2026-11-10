@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, ArrowRightLeft, ClipboardCheck, Copy, Pencil, Plus, School, Trash2, UserMinus, UserPlus } from 'lucide-react';
 import { useDb } from '../data/store';
 import { deleteClass, dropDancers, duplicateClass, enrollDancers, moveDancers, promoteFromWaitlist, saveClass, type ClassInput } from '../data/studioActions';
-import { ageFromBirthday, formatDate, fullName } from '../data/selectors';
+import { ageFromBirthday, formatDate, formatTime, fullName } from '../data/selectors';
 import { WEEKDAY_NAMES, addDays, attendanceRate, classConflicts, enrolledDancerIds, occurrencesBetween, staffName, waitlistDancerIds } from '../data/studio';
 import { Badge, BulkBar, Card, CheckList, DataTable, EmptyState, Field, PageHeader, SampleTag, SearchInput, SearchSelect, type Column } from '../components/ui';
 import { FormModal } from '../components/forms';
@@ -433,7 +433,7 @@ export function ClassDetailPage() {
               {upcoming.map((o) => (
                 <li key={o.key} className={o.cancelled ? 'muted' : ''}>
                   <div>
-                    <strong>{formatDate(o.date)}</strong> <span className="small faint">{o.start}–{o.end}</span>
+                    <strong>{formatDate(o.date)}</strong> <span className="small faint">{formatTime(o.start)}–{formatTime(o.end)}</span>
                     {o.cancelled && <div className="small bad-text">Cancelled: {o.cancelReason}</div>}
                     {o.substituted && <div className="small">Substitute: {staffName(db.staff.find((s) => s.id === o.teacherId))}</div>}
                     {o.moved && !o.cancelled && <div className="small">Moved from {formatDate(o.originalDate)}</div>}

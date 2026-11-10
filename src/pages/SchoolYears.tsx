@@ -9,6 +9,7 @@ import { Badge, Card, EmptyState, Field, PageHeader, SampleTag } from '../compon
 import { FormModal } from '../components/forms';
 import { useConfirm, useRun } from '../components/feedback';
 import { useViewer } from '../lib/session';
+import { todayStr } from '../data/ids';
 import { CalendarEntryForm, entryTypeLabels } from './Calendar';
 import type { Classroom, ID, SchoolYear } from '../data/types';
 
@@ -248,7 +249,7 @@ export function SchoolYearsPage() {
 function YearForm({ open, id, onClose }: { open: boolean; id?: ID; onClose: () => void }) {
   const db = useDb();
   const run = useRun();
-  const y0 = new Date().getFullYear();
+  const y0 = Number(todayStr().slice(0, 4));
   const empty: SchoolYearInput = { name: `${y0}–${y0 + 1}`, startDate: `${y0}-09-01`, endDate: `${y0 + 1}-06-15`, registrationStart: '', registrationEnd: '', status: 'planning', tuitionNotes: '', recitalInfo: '', notes: '' };
   const [v, setV] = useState<SchoolYearInput>(empty);
   const [last, setLast] = useState<string | null>(null);

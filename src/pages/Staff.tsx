@@ -3,8 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { GraduationCap, KeyRound, Mail, Pencil, Phone, Plus, Power, Trash2 } from 'lucide-react';
 import { useDb } from '../data/store';
 import { deleteStaff, saveAccount, saveStaff, setStaffStatus, type StaffInput } from '../data/studioActions';
-import { fullName } from '../data/selectors';
-import { enrolledDancerIds, hoursKindLabels, occurrencesBetween, payrollSummary, positionLabels, staffName, WEEKDAY_NAMES } from '../data/studio';
+import { formatDate, formatTime, fullName } from '../data/selectors';
+import { fmtWeekdayDate } from '../data/time';
+import { enrolledDancerIds, hoursKindLabels, occurrencesBetween, payrollSummary, positionLabels, staffName } from '../data/studio';
 import { Badge, Card, DataTable, EmptyState, Field, PageHeader, SampleTag, SearchInput, Tabs, type Column } from '../components/ui';
 import { FormModal } from '../components/forms';
 import { useConfirm, useRun } from '../components/feedback';
@@ -278,7 +279,7 @@ export function StaffDetailPage() {
               <dt>Position</dt>
               <dd>{positionLabels[s.position]}</dd>
               <dt>Hire date</dt>
-              <dd>{s.hireDate || '—'}</dd>
+              <dd>{formatDate(s.hireDate) || '—'}</dd>
               <dt>Dance styles</dt>
               <dd>{s.styles.join(', ') || '—'}</dd>
               <dt>Qualifications</dt>
@@ -354,9 +355,9 @@ export function StaffDetailPage() {
                 {upcoming.map((o) => (
                   <li key={o.key} className={o.cancelled ? 'muted' : ''}>
                     <div>
-                      <strong>{WEEKDAY_NAMES[new Date(o.date + 'T12:00').getDay()].slice(0, 3)} {o.date}</strong> · {o.cls.name}
+                      <strong>{fmtWeekdayDate(o.date)}</strong> · {o.cls.name}
                       <div className="small faint">
-                        {o.start}–{o.end}
+                        {formatTime(o.start)}–{formatTime(o.end)}
                         {o.cancelled && ` · Cancelled: ${o.cancelReason}`}
                         {o.substituted && o.regularTeacherId === s.id && ` · Substitute: ${staffName(db.staff.find((x) => x.id === o.teacherId))}`}
                         {o.substituted && o.teacherId === s.id && ' · You are substituting'}
@@ -381,7 +382,7 @@ export function StaffDetailPage() {
                     return (
                       <li key={o.key}>
                         <span>
-                          {o.date} · {o.cls.name}
+                          {formatDate(o.date)} · {o.cls.name}
                         </span>
                         <span className="small faint">{taken.length ? `Attendance: ${taken.filter((a) => a.status === 'present' || a.status === 'late').length}/${taken.length} present` : 'Attendance not taken'}</span>
                       </li>

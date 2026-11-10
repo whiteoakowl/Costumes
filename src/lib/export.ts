@@ -1,5 +1,5 @@
 import type { Database, ID, ItemKind, OwnerType } from '../data/types';
-import { accessoriesFor, ageFromBirthday, buildOverview, buildPropOverview, byId, castsFor, formatDateTime, fullName, issueLabels, itemsOf, slotLabel, sortedSlots, volunteerName } from '../data/selectors';
+import { formatDate, accessoriesFor, ageFromBirthday, buildOverview, buildPropOverview, byId, castsFor, formatDateTime, fullName, issueLabels, itemsOf, slotLabel, sortedSlots, volunteerName } from '../data/selectors';
 import { progressReasonLabels } from '../data/actions';
 import { todayStr } from '../data/ids';
 import { exportImages } from './images';
@@ -49,7 +49,7 @@ export function costumeInventoryCsv(db: Database, costumeIds?: ID[], kind: ItemK
       c.size,
       c.quantity,
       accessoriesFor(db, c.id).map((a) => `${a.name} x${a.quantity}`).join('; '),
-      c.dateAdded,
+      formatDate(c.dateAdded),
       c.storageLocationId ? locs.get(c.storageLocationId)?.name : 'Unassigned',
       c.status === 'ready' ? 'READY' : `IN PROGRESS (${progressReasonLabels[c.progressReason ?? 'repair']})`,
       formatDateTime(c.statusUpdatedAt),
@@ -145,7 +145,7 @@ export function exportDancers(db: Database) {
     d.lastName,
     fullName(d),
     ageFromBirthday(d.birthday) ?? '',
-    d.birthday,
+    formatDate(d.birthday),
     d.clothingSize,
     d.costumeSize,
     d.shoeSize,

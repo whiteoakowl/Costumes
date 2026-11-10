@@ -58,6 +58,8 @@ These parts of the full brief are still to come. Several need a server and outsi
 
 ## Data storage
 
+- **Dates and times:** dates are shown as MM/DD/YYYY (e.g. 12/15/1984). Times are New York Eastern time whatever the device's time zone: timestamps are converted and labelled EST/EDT, and "today" is the New York date. Class and event times are entered as studio (Eastern) wall-clock times. See `src/data/time.ts`.
+
 - All data is stored as **relational tables** linked by unique IDs: accounts, families, guardians, emergency contacts, staff, school years, classrooms, classes, enrollments, calendar entries, per-date class changes, attendance, time entries (with audit history), notices, announcements, an activity log, dancers, categories, costumes and props, accessories / parts, notes, storage locations, shows, performance plans, cast lists, cast memberships, costume and prop assignments, and volunteers. Costumes and props share one inventory table, marked by `kind`. See `src/data/types.ts`.
 - Every change is **saved automatically** in the browser (localStorage). Data survives refreshes and closing the browser, and stays in sync across open tabs.
 - Deleting a record never leaves broken links. Related assignments are cleaned up, and costumes from a deleted category or location are reassigned (or left unassigned) and the change is logged.

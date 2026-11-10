@@ -1,4 +1,5 @@
 import type { ID } from './types';
+import { nyToday } from './time';
 
 export function newId(): ID {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
@@ -9,9 +10,7 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
-/** Local date as YYYY-MM-DD. */
+/** Today's date in New York (the studio's time zone), as YYYY-MM-DD. */
 export function todayStr(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return nyToday();
 }

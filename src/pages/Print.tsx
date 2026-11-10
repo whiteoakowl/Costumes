@@ -99,7 +99,7 @@ function PrintShell({ title, subtitle, children, photos, setPhotos }: { title: s
             <h1>{title}</h1>
             {subtitle && <div className="sheet-sub">{subtitle}</div>}
           </div>
-          <div className="sheet-date">Printed {new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</div>
+          <div className="sheet-date">Printed {formatDateTime(new Date().toISOString())}</div>
         </header>
         {children}
       </article>

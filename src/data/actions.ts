@@ -34,6 +34,7 @@ import {
   workTypeLabels,
 } from './workflow';
 import { ensureOwnerAccount } from './studio';
+import { fmtDate, fmtDateTime } from './time';
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -588,9 +589,7 @@ export function addWorkNote(id: ID, text: string) {
 }
 
 function formatLocal(dt: string) {
-  const d = new Date(dt);
-  if (Number.isNaN(d.getTime())) return dt;
-  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', ...(dt.length > 10 ? { hour: 'numeric', minute: '2-digit' } : {}) });
+  return dt.length > 10 ? fmtDateTime(dt) : fmtDate(dt);
 }
 
 /* ------------------------------------------------------------- photos */

@@ -98,7 +98,7 @@ export function StudioCalendar({ classIds, readOnly, title = 'Calendar', subtitl
   };
   const heading =
     view === 'day'
-      ? parseDate(anchor).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+      ? `${WEEKDAY_NAMES[parseDate(anchor).getDay()]} ${formatDate(anchor)}`
       : view === 'week'
         ? `${formatDate(range.from)} – ${formatDate(range.to)}`
         : view === 'month'
@@ -256,7 +256,7 @@ export function StudioCalendar({ classIds, readOnly, title = 'Calendar', subtitl
                     </Link>
                   ))}
                   {list.slice(0, 4).map((o) => (
-                    <button key={o.key} className={`cal-chip cls ${o.cancelled ? 'cancelled' : ''} ${o.moved || o.substituted ? 'changed' : ''}`} onClick={() => setOpenOcc(o)} title={`${o.cls.name} ${o.start}–${o.end}`}>
+                    <button key={o.key} className={`cal-chip cls ${o.cancelled ? 'cancelled' : ''} ${o.moved || o.substituted ? 'changed' : ''}`} onClick={() => setOpenOcc(o)} title={`${o.cls.name} ${formatTime(o.start)}–${formatTime(o.end)}`}>
                       {formatTime(o.start)} {o.cls.name}
                     </button>
                   ))}
@@ -434,7 +434,7 @@ function TimeGrid({
                         e.dataTransfer.effectAllowed = 'move';
                       }}
                       onClick={() => onOpen(o)}
-                      aria-label={`${o.cls.name} ${o.date} ${o.start}${o.cancelled ? ' cancelled' : ''}`}
+                      aria-label={`${o.cls.name} ${formatDate(o.date)} ${formatTime(o.start)}${o.cancelled ? ' cancelled' : ''}`}
                       data-key={o.key}
                     >
                       <strong>{o.cls.name}</strong>

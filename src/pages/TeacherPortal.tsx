@@ -11,6 +11,7 @@ import { classWhen } from '../components/studioUi';
 import { useViewer } from '../lib/session';
 import { StudioCalendar } from './Calendar';
 import { todayStr } from '../data/ids';
+import { todayHeading } from '../data/time';
 
 function useMe() {
   const db = useDb();
@@ -36,7 +37,7 @@ export function TeacherDashboard() {
   const perfs = db.performances.filter((p) => isUpcomingPerformance(p)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
   return (
     <>
-      <PageHeader title={`Hello, ${me.firstName}`} subtitle={new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} />
+      <PageHeader title={`Hello, ${me.firstName}`} subtitle={todayHeading()} />
       <div className="stats stats-4">
         <StatCard label="Classes today" value={todays.filter((o) => !o.cancelled).length} icon={<CalendarDays size={20} />} tone="rose" to="/teacher/schedule" />
         <StatCard label="My classes" value={db.classes.filter((c) => c.teacherId === me.id || c.assistantId === me.id).length} icon={<School size={20} />} tone="plum" to="/teacher/classes" />

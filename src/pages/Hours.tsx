@@ -82,7 +82,7 @@ function EditEntry({ entry, onClose }: { entry: TimeEntry | null; onClose: () =>
     }
   }
   return (
-    <FormModal open={!!entry} onClose={onClose} title="Edit Hours" subtitle={entry ? `${entry.date} · ${hoursKindLabels[entry.kind]}` : ''} size="sm" onSubmit={() => run(() => (editTimeEntry(entry!.id, { hours, description: desc, ...(v.can('payroll.view') ? { rate } : {}) }, reason), true), 'Hours updated — change recorded.') && onClose()}>
+    <FormModal open={!!entry} onClose={onClose} title="Edit Hours" subtitle={entry ? `${formatDate(entry.date)} · ${hoursKindLabels[entry.kind]}` : ''} size="sm" onSubmit={() => run(() => (editTimeEntry(entry!.id, { hours, description: desc, ...(v.can('payroll.view') ? { rate } : {}) }, reason), true), 'Hours updated — change recorded.') && onClose()}>
       <Field label="Hours">
         <input className="input" type="number" min={0.25} step={0.25} value={hours} onChange={(e) => setHours(Number(e.target.value))} />
       </Field>
@@ -103,7 +103,7 @@ function EditEntry({ entry, onClose }: { entry: TimeEntry | null; onClose: () =>
 
 function HistoryDialog({ entry, onClose }: { entry: TimeEntry | null; onClose: () => void }) {
   return (
-    <Modal open={!!entry} onClose={onClose} title="Audit trail" subtitle={entry ? `${entry.date} · ${entry.hours} h · ${hoursKindLabels[entry.kind]}` : ''} size="sm">
+    <Modal open={!!entry} onClose={onClose} title="Audit trail" subtitle={entry ? `${formatDate(entry.date)} · ${entry.hours} h · ${hoursKindLabels[entry.kind]}` : ''} size="sm">
       <ul className="log compact">
         {entry?.history.map((h, i) => (
           <li key={i}>
@@ -292,7 +292,7 @@ export function HoursPage() {
       `hours-detail-${from}-to-${to}.csv`,
       toCsv(
         ['Date', 'Staff', 'Type', 'Class', 'Description', 'Scheduled hours', 'Hours', 'Rate', 'Pay', 'Status', 'Reviewed by', 'Review note'],
-        entries.map((e) => [e.date, staffName(db.staff.find((s) => s.id === e.staffId)), hoursKindLabels[e.kind], db.classes.find((c) => c.id === e.classId)?.name ?? '', e.description, e.scheduledHours, e.hours, e.rate, entryPay(e).toFixed(2), e.status, e.reviewedBy, e.reviewNote]),
+        entries.map((e) => [formatDate(e.date), staffName(db.staff.find((s) => s.id === e.staffId)), hoursKindLabels[e.kind], db.classes.find((c) => c.id === e.classId)?.name ?? '', e.description, e.scheduledHours, e.hours, e.rate, entryPay(e).toFixed(2), e.status, e.reviewedBy, e.reviewNote]),
       ),
       'text/csv;charset=utf-8',
     );
