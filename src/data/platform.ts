@@ -11,6 +11,7 @@ import type {
   Channel,
 } from './types';
 import { todayStr } from './ids';
+import { fmtDate } from './time';
 import { enrolledDancerIds, addDays } from './studio';
 import { fullName } from './selectors';
 
@@ -198,9 +199,9 @@ export function costumeConflicts(db: Database, opts: { from?: string; performanc
       }
       const pids = perPerf.map((x) => x.p.id);
       if (!pids.length) continue;
-      if (costume.status === 'in_progress') push({ key: `wip:${cid}:${date}`, costumeId: cid, kind: 'in_progress', date, performanceIds: pids, message: `${costume.name} is marked IN PROGRESS (repair / cleaning) and is needed ${date}.` });
+      if (costume.status === 'in_progress') push({ key: `wip:${cid}:${date}`, costumeId: cid, kind: 'in_progress', date, performanceIds: pids, message: `${costume.name} is marked IN PROGRESS (repair / cleaning) and is needed ${fmtDate(date)}.` });
       const out = db.checkouts.filter((c) => c.costumeId === cid && c.status === 'checked_out' && (!c.expectedReturn || c.expectedReturn >= date) && !pids.includes(c.ownerId ?? ''));
-      if (out.length) push({ key: `out:${cid}:${date}`, costumeId: cid, kind: 'checked_out', date, performanceIds: pids, message: `${costume.name} has ${out.reduce((s, c) => s + c.quantity, 0)} piece(s) checked out elsewhere that won't be back before ${date}.` });
+      if (out.length) push({ key: `out:${cid}:${date}`, costumeId: cid, kind: 'checked_out', date, performanceIds: pids, message: `${costume.name} has ${out.reduce((s, c) => s + c.quantity, 0)} piece(s) checked out elsewhere that won't be back before ${fmtDate(date)}.` });
       const missing = db.accessories.filter((a) => a.costumeId === cid && a.quantity < Math.max(1, ...perPerf.map((x) => x.set.size)));
       if (missing.length) push({ key: `acc:${cid}:${date}`, costumeId: cid, kind: 'accessories', date, performanceIds: pids, message: `${costume.name}: not enough ${missing.map((a) => `${a.name} (${a.quantity})`).join(', ')} for the dancers wearing it.` });
     }

@@ -1,3 +1,4 @@
+import { FamilyRecitalCard } from './Productions';
 import { useState } from 'react';
 import { CalendarDays, ClipboardCheck, HeartPulse, Mail, Pencil, Phone, Plus, School, Shirt, ShieldAlert, Theater, UserRound } from 'lucide-react';
 import { useDb } from '../data/store';
@@ -270,6 +271,7 @@ export function FamilyCostumesPage() {
   return (
     <>
       <PageHeader title="Recitals & Costumes" subtitle="What each dancer is wearing and carrying in upcoming shows" />
+      <FamilyRecitalCard dancerIds={dancers.map((d) => d.id)} />
       {dancers.map((d) => {
         const items = dancerCostumes(db, d.id);
         return (

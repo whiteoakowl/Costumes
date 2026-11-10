@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, CheckCircle2, Copy, Download, FolderInput, History, MapPin, Pencil, Plus, Tags, Trash2, Wrench , Printer, Sparkles} from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Copy, Download, FolderInput, History, MapPin, Pencil, Plus, Tags, Trash2, Wrench, Printer, Sparkles, PackageOpen } from 'lucide-react';
 import { useDb } from '../data/store';
 import { addCostumeNote, deleteCategory, deleteCostumes, duplicateCostume, moveCategory, moveCostumes, saveCategory } from '../data/actions';
 import { accessoriesFor, byId, costumeUsage, formatDate, formatDateTime, itemsOf, kindOf, sortedCategories, volunteerName } from '../data/selectors';
@@ -17,6 +17,8 @@ import { isOpenOrder, noteTypeLabels } from '../data/workflow';
 import { WorkOrderDialog, WorkOrderTable } from '../components/work';
 import { Avatar, PhotoGallery } from '../components/photos';
 import { openPrint } from './Print';
+import { CheckoutDialog } from './Productions';
+import { availability, availabilityLabels, availableQty } from '../data/platform';
 
 type View = 'all' | 'category' | 'size' | 'location' | 'ready' | 'in_progress';
 
@@ -442,6 +444,7 @@ export function CostumeDetailPage() {
   const [noteType, setNoteType] = useState<NoteType>('general');
   const [noteText, setNoteText] = useState('');
   const [sending, setSending] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
   const c = db.costumes.find((x) => x.id === id);
   const L = itemLabels[c ? kindOf(c) : 'costume'];
 
@@ -496,6 +499,12 @@ export function CostumeDetailPage() {
             <button className="btn btn-ghost" onClick={() => openPrint('item', { id: c.id })}>
               <Printer size={16} /> Print
             </button>
+            {kindOf(c) === 'costume' && (
+              <button className="btn btn-ghost" onClick={() => setCheckingOut(true)} title={`${availabilityLabels[availability(db, c.id)]} — ${availableQty(db, c.id)} of ${c.quantity} on the shelf`}>
+                <PackageOpen size={16} /> Check out ({availableQty(db, c.id)}/{c.quantity})
+              </button>
+            )}
+            <CheckoutDialog open={checkingOut} costumeId={c.id} onClose={() => setCheckingOut(false)} />
             <button className="btn btn-primary" onClick={() => ed.editCostume(c.id)}>
               <Pencil size={16} /> Edit {L.one}
             </button>

@@ -36,6 +36,7 @@ import { FamilyAccountPage, FamilyAttendancePage, FamilyCostumesPage, FamilyDanc
 import { PerformanceDashboard } from './pages/PerformancePortal';
 import { ReportsPage } from './pages/Reports';
 import { PrintPage } from './pages/Print';
+import { CheckoutPage, RecitalDetailPage, RecitalsPage, ShowDayIndexPage, ShowDayPage } from './pages/Productions';
 import { FinancePage, InvoiceDetailPage, ParentBillingPage } from './pages/Finance';
 import { collectGarbage } from './lib/images';
 import { getDb } from './data/store';
@@ -93,6 +94,11 @@ function MainApp() {
               <Route path="/family/account" element={<FamilyAccountPage />} />
               <Route path="/performance" element={<PerformanceDashboard />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/recitals" element={<RecitalsPage />} />
+              <Route path="/recitals/:id" element={<RecitalDetailPage />} />
+              <Route path="/show-day" element={<ShowDayIndexPage />} />
+              <Route path="/show-day/:id" element={<ShowDayPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/invoices" element={<FinancePage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="/family/billing" element={<ParentBillingPage />} />

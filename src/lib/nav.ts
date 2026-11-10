@@ -8,6 +8,9 @@ import {
   Home,
   KeyRound,
   LayoutDashboard,
+  ListOrdered,
+  Music,
+  PackageOpen,
   Printer,
   Receipt,
   School,
@@ -79,11 +82,14 @@ export const NAV_ITEMS: NavItem[] = [
   // costumes
   { to: '/costumes', label: 'Costumes', icon: Shirt, section: 'Costumes', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('costumes.view') },
   { to: '/props', label: 'Props', icon: Wand2, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.view') },
+  { to: '/checkout', label: 'Costume Checkout', icon: PackageOpen, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.view') },
   { to: '/repairs', label: 'Repair & Cleaning', icon: Wrench, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.edit') },
   { to: '/storage', label: 'Storage Locations', icon: Warehouse, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.view') },
 
   // productions
   { to: '/shows', label: 'Shows', icon: Theater, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
+  { to: '/recitals', label: 'Recitals', icon: Music, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
+  { to: '/show-day', label: 'Show Day & Backstage', icon: ListOrdered, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
   { to: '/performances', label: 'Performance Planning', icon: CalendarHeart, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
 
   // admin
