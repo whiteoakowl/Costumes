@@ -12,6 +12,7 @@ import {
   Music,
   PackageOpen,
   Printer,
+  BarChart3,
   Globe,
   Video,
   CalendarX2,
@@ -132,6 +133,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/performances', label: 'Performance Planning', icon: CalendarHeart, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
 
   // admin
+  { to: '/analytics', label: 'Analytics', icon: BarChart3, section: 'Admin', show: (v) => admin(v) && v.can('reports.view') },
   { to: '/reports', label: 'Reports & Printing', icon: Printer, section: 'Admin', show: (v) => (admin(v) || perf(v)) && v.can('reports.view') },
   { to: '/accounts', label: 'Accounts & Access', icon: KeyRound, section: 'Admin', show: (v) => v.can('accounts.manage') },
 ];

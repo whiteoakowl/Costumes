@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Database as DbIcon, Download, Plus, RotateCcw, Sparkles, Tags, Trash2, Upload, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Database as DbIcon, Download, Plus, RotateCcw, Pencil, Sparkles, Tags, Trash2, Upload, X } from 'lucide-react';
 import { useDb } from '../data/store';
-import { countSampleRecords, eraseAllData, loadSampleData, removeSampleData, restoreBackup, updateSettings } from '../data/actions';
-import { Card, Field, PageHeader } from '../components/ui';
+import { countSampleRecords, eraseAllData, loadSampleData, removeSampleData, renameOption, restoreBackup, updateSettings, type OptionList } from '../data/actions';
+import { useSearchParams } from 'react-router-dom';
+import { PlatformSettings } from './SettingsPlatform';
+import { Card, Field, PageHeader, Tabs } from '../components/ui';
 import { useConfirm, useRun, useToast } from '../components/feedback';
 import { CategoryManager } from './Costumes';
 import { clearImages, importImages } from '../lib/images';
@@ -10,8 +12,9 @@ import { clearFiles, importFiles } from '../lib/files';
 import { exportAllPerformanceAssignments, exportBackup, exportCostumeInventory, exportDancers, exportVolunteers } from '../lib/export';
 import { sortedCategories } from '../data/selectors';
 
-function ListEditor({ label, items, onChange, placeholder }: { label: string; items: string[]; onChange: (next: string[]) => void; placeholder: string }) {
+export function ListEditor({ label, items, onChange, placeholder, onRename }: { label: string; items: string[]; onChange: (next: string[]) => void; placeholder: string; onRename?: (from: string, to: string) => void }) {
   const [value, setValue] = useState('');
+  const [editing, setEditing] = useState<{ from: string; to: string } | null>(null);
   const add = () => {
     const v = value.trim();
     if (!v || items.some((i) => i.toLowerCase() === v.toLowerCase())) return;
@@ -29,8 +32,17 @@ function ListEditor({ label, items, onChange, placeholder }: { label: string; it
       <ul>
         {items.map((it, i) => (
           <li key={it}>
-            <span>{it}</span>
+            {editing?.from === it ? (
+              <input className="input input-sm" value={editing.to} autoFocus aria-label={`Rename ${it}`} onChange={(e) => setEditing({ from: it, to: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { onRename?.(it, editing.to); setEditing(null); } if (e.key === 'Escape') setEditing(null); }} onBlur={() => { if (editing.to.trim() && editing.to !== it) onRename?.(it, editing.to); setEditing(null); }} />
+            ) : (
+              <span>{it}</span>
+            )}
             <div className="row-actions">
+              {onRename && (
+                <button className="icon-btn" aria-label={`Rename ${it}`} title="Rename everywhere it is used" onClick={() => setEditing({ from: it, to: it })}>
+                  <Pencil size={14} />
+                </button>
+              )}
               <button className="icon-btn" aria-label={`Move ${it} up`} disabled={i === 0} onClick={() => move(i, -1)}>
                 <ArrowUp size={14} />
               </button>
@@ -58,6 +70,12 @@ export function SettingsPage() {
   const db = useDb();
   const run = useRun();
   const toast = useToast();
+  const [params, setParams] = useSearchParams();
+  const tab = (params.get('tab') as 'general' | 'studio' | 'billing' | 'programs' | 'reminders') || 'general';
+  const renameEverywhere = (list: OptionList, a: string, b: string) => {
+    const n = run(() => renameOption(list, a, b));
+    if (n !== undefined) toast.success(`Renamed to “${b.trim()}”${n ? ` and updated ${n} record${n === 1 ? '' : 's'}` : ''}.`);
+  };
   const confirm = useConfirm();
   const [name, setName] = useState(db.settings.studioName);
   const [prefix, setPrefix] = useState(db.settings.costumeIdPrefix);
@@ -92,7 +110,21 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" subtitle="Studio preferences, dropdown options and data management" />
+      <PageHeader title="Settings" subtitle="Studio preferences, billing, programs, reminders, dropdown options and data management" />
+      <Tabs
+        value={tab}
+        onChange={(t) => setParams(t === 'general' ? {} : { tab: t }, { replace: true })}
+        tabs={[
+          { value: 'general', label: 'Inventory & data' },
+          { value: 'studio', label: 'Studio information' },
+          { value: 'billing', label: 'Billing' },
+          { value: 'programs', label: 'Programs & options' },
+          { value: 'reminders', label: 'Reminders' },
+        ]}
+      />
+      {tab !== 'general' ? (
+        <PlatformSettings tab={tab} />
+      ) : (
       <div className="settings-grid">
         <Card title="Studio">
           <Field label="Studio name" hint="Shown in the sidebar under the app name">
@@ -133,16 +165,16 @@ export function SettingsPage() {
         </Card>
 
         <Card title="Dancer Levels">
-          <ListEditor label="Levels (in order)" items={db.settings.levels} onChange={(levels) => run(() => updateSettings({ levels }))} placeholder="e.g. Level 6" />
+          <ListEditor label="Levels (in order)" items={db.settings.levels} onChange={(levels) => run(() => updateSettings({ levels }))} placeholder="e.g. Level 6" onRename={(a, b) => renameEverywhere('levels', a, b)} />
         </Card>
 
         <Card title="Size Options">
-          <ListEditor label="Sizes suggested in size fields" items={db.settings.sizes} onChange={(sizes) => run(() => updateSettings({ sizes }))} placeholder="e.g. Adult XXL" />
+          <ListEditor label="Sizes suggested in size fields" items={db.settings.sizes} onChange={(sizes) => run(() => updateSettings({ sizes }))} placeholder="e.g. Adult XXL" onRename={(a, b) => renameEverywhere('sizes', a, b)} />
           <p className="small faint">Size fields also accept any custom value.</p>
         </Card>
 
         <Card title="Volunteer Skills">
-          <ListEditor label="Skills offered when adding a volunteer" items={db.settings.skills} onChange={(skills) => run(() => updateSettings({ skills }))} placeholder="e.g. Lighting" />
+          <ListEditor label="Skills offered when adding a volunteer" items={db.settings.skills} onChange={(skills) => run(() => updateSettings({ skills }))} placeholder="e.g. Lighting" onRename={(a, b) => renameEverywhere('skills', a, b)} />
         </Card>
 
         <Card title="Export" icon={<Download size={18} />}>
@@ -244,6 +276,7 @@ export function SettingsPage() {
           </button>
         </Card>
       </div>
+      )}
       <CategoryManager open={catsOpen} onClose={() => setCatsOpen(false)} />
     </>
   );

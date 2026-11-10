@@ -51,6 +51,7 @@ export function ReportsPage() {
   const [workStatus, setWorkStatus] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [pick, setPick] = useState({ cls: '', team: '', ro: '', prog: false, bs: '', qc: false, fam: '', ev: '', pol: '', tix: '', fund: '' });
 
   const go = (r: ReportKey, params: Record<string, string> = {}) => openPrint(r, params);
   const ownerOptions = [
@@ -97,6 +98,43 @@ export function ReportsPage() {
           <Pick label="Location" value={loc} onChange={setLoc} none="All locations" options={sortedLocations(db).map((l) => ({ value: l.id, label: l.name }))} />
         </Report>
         <Report icon={<HandHeart size={20} />} title="Volunteer Contact List" description="Names, phone numbers, emails, skills, availability and open jobs." onPrint={() => go('volunteers')} />
+      </div>
+      <h2 className="section-head">Studio reports</h2>
+      <div className="report-grid">
+        <Report icon={<Users size={20} />} title="Class Roster" description="Enrolled dancers with level, family, phone and allergies." onPrint={() => pick.cls && go('roster', { id: pick.cls })}>
+          <Pick label="Class" value={pick.cls} onChange={(v) => setPick({ ...pick, cls: v })} none="Choose a class…" options={db.classes.map((c) => ({ value: c.id, label: c.name }))} />
+        </Report>
+        <Report icon={<Users size={20} />} title="Team Roster" description="Team members, coaches, rehearsal and competition schedules." onPrint={() => pick.team && go('team', { id: pick.team })}>
+          <Pick label="Team" value={pick.team} onChange={(v) => setPick({ ...pick, team: v })} none="Choose a team…" options={db.teams.map((t) => ({ value: t.id, label: t.name }))} />
+        </Report>
+        <Report icon={<ClipboardList size={20} />} title="Running Order / Program" description="Numbered running order with times, costumes and backstage notes — or a printable program." onPrint={() => pick.ro && go(pick.prog ? 'program' : 'runningorder', { id: pick.ro })}>
+          <Pick label="Performance" value={pick.ro} onChange={(v) => setPick({ ...pick, ro: v })} none="Choose a performance…" options={db.performances.filter((p) => db.lineup.some((l) => l.performanceId === p.id)).map((p) => ({ value: p.id, label: p.name }))} />
+          <label className="check-inline small">
+            <input type="checkbox" checked={pick.prog} onChange={(e) => setPick({ ...pick, prog: e.target.checked })} /> Audience program
+          </label>
+        </Report>
+        <Report icon={<ClipboardList size={20} />} title="Backstage Check-in & Quick Changes" description="Check-in sheet with crew, dressing rooms and guardian phones, or the quick-change plan." onPrint={() => pick.bs && go(pick.qc ? 'quickchanges' : 'backstage', { id: pick.bs })}>
+          <Pick label="Performance" value={pick.bs} onChange={(v) => setPick({ ...pick, bs: v })} none="Choose a performance…" options={db.performances.filter((p) => db.lineup.some((l) => l.performanceId === p.id)).map((p) => ({ value: p.id, label: p.name }))} />
+          <label className="check-inline small">
+            <input type="checkbox" checked={pick.qc} onChange={(e) => setPick({ ...pick, qc: e.target.checked })} /> Quick changes instead
+          </label>
+        </Report>
+        <Report icon={<Shirt size={20} />} title="Costume Checkouts" description="Everything checked out or reserved, with due dates and overdue items." onPrint={() => go('checkouts')} />
+        <Report icon={<FileText size={20} />} title="Family Statement" description="A family's invoices, payments, credits and balance." onPrint={() => pick.fam && go('statement', { id: pick.fam })}>
+          <Pick label="Family" value={pick.fam} onChange={(v) => setPick({ ...pick, fam: v })} none="Choose a family…" options={db.families.map((f) => ({ value: f.id, label: f.name }))} />
+        </Report>
+        <Report icon={<CalendarHeart size={20} />} title="Event Sign-ups" description="Registered and waiting-list dancers with their answers and payment status." onPrint={() => pick.ev && go('event', { id: pick.ev })}>
+          <Pick label="Event" value={pick.ev} onChange={(v) => setPick({ ...pick, ev: v })} none="Choose an event…" options={db.signupEvents.map((e) => ({ value: e.id, label: e.name }))} />
+        </Report>
+        <Report icon={<FileText size={20} />} title="Policy Signatures" description="Policy text with every family's signature status." onPrint={() => pick.pol && go('policy', { id: pick.pol })}>
+          <Pick label="Policy" value={pick.pol} onChange={(v) => setPick({ ...pick, pol: v })} none="Choose a policy…" options={db.policies.map((p) => ({ value: p.id, label: p.title }))} />
+        </Report>
+        <Report icon={<Theater size={20} />} title="Will Call / Ticket List" description="Ticket buyers, ticket types and seats for the door." onPrint={() => pick.tix && go('tickets', { id: pick.tix })}>
+          <Pick label="Show" value={pick.tix} onChange={(v) => setPick({ ...pick, tix: v })} none="Choose a show…" options={db.ticketEvents.map((e) => ({ value: e.id, label: e.name }))} />
+        </Report>
+        <Report icon={<HandHeart size={20} />} title="Fundraiser Report" description="Donations and orders by dancer, with a delivery check-off column." onPrint={() => pick.fund && go('fundraiser', { id: pick.fund })}>
+          <Pick label="Fundraiser" value={pick.fund} onChange={(v) => setPick({ ...pick, fund: v })} none="Choose a fundraiser…" options={db.fundraisers.map((f) => ({ value: f.id, label: f.name }))} />
+        </Report>
       </div>
     </>
   );

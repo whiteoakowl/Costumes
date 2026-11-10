@@ -35,6 +35,7 @@ import {
 } from './workflow';
 import { ensureOwnerAccount } from './studio';
 import { fmtDate, fmtDateTime } from './time';
+import { logActivity } from './studioActions';
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -1133,4 +1134,44 @@ export function restoreBackup(raw: unknown) {
   pruneOrphans(db);
   db.meta.sampleLoaded = true;
   replaceDb(db);
+}
+
+/** Option lists that can be renamed everywhere they are used. */
+export type OptionList = 'levels' | 'sizes' | 'skills' | 'danceStyles' | 'ageGroups' | 'invoiceCategories' | 'accessoryCategories';
+
+/** Rename a dropdown option and update every record that uses it. Returns how many records changed. */
+export function renameOption(list: OptionList, from: string, to: string): number {
+  const next = to.trim();
+  if (!next) throw new ValidationError('The new name cannot be empty.');
+  if (next === from) return 0;
+  return commit((db) => {
+    const items = (db.settings[list] as string[] | undefined) ?? [];
+    if (items.some((i) => i.toLowerCase() === next.toLowerCase() && i !== from)) throw new ValidationError(`“${next}” is already in the list.`);
+    (db.settings as unknown as Record<string, string[]>)[list] = items.map((i) => (i === from ? next : i));
+    let n = 0;
+    const swap = <T,>(rows: T[], get: (r: T) => string | undefined, set: (r: T, v: string) => void) => {
+      for (const r of rows) if (get(r) === from) {
+        set(r, next);
+        n += 1;
+      }
+    };
+    if (list === 'levels') {
+      swap(db.dancers, (d) => d.level, (d, v) => (d.level = v));
+      swap(db.classes, (c) => c.level, (c, v) => (c.level = v));
+    }
+    if (list === 'sizes') {
+      swap(db.dancers, (d) => d.clothingSize, (d, v) => (d.clothingSize = v));
+      swap(db.dancers, (d) => d.costumeSize, (d, v) => (d.costumeSize = v));
+      swap(db.costumes, (c) => c.size, (c, v) => (c.size = v));
+    }
+    if (list === 'danceStyles') {
+      swap(db.classes, (c) => c.style, (c, v) => (c.style = v));
+      swap(db.recitalNumbers, (x) => x.style, (x, v) => (x.style = v));
+      for (const s of db.staff) if (s.styles.includes(from)) (s.styles = s.styles.map((x) => (x === from ? next : x))), (n += 1);
+    }
+    if (list === 'skills') for (const vol of db.volunteers) if (vol.skills.includes(from)) (vol.skills = vol.skills.map((x) => (x === from ? next : x))), (n += 1);
+    if (list === 'invoiceCategories') for (const inv of db.invoices) for (const l of inv.lines) if (l.category === from) (l.category = next), (n += 1);
+    logActivity(db, 'Option renamed', `${from} → ${next} (${n} record${n === 1 ? '' : 's'} updated)`, '/settings');
+    return n;
+  });
 }

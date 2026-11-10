@@ -43,6 +43,7 @@ import { CommunicationsPage, ComposePage, InboxPage, MessageDetailPage, Notifica
 import { processScheduled, releasePendingNotifications, runReminders } from './data/commsActions';
 import { ClassVideosPage, MediaLibraryPage, ParentVideosPage, ScheduleRequestsPage, TeacherRequestsPage } from './pages/Media';
 import { PublicSitePage, WebsiteEditorPage, WebsitePage } from './pages/Website';
+import { AnalyticsPage } from './pages/Analytics';
 import { FinancePage, InvoiceDetailPage, ParentBillingPage } from './pages/Finance';
 import { collectGarbage } from './lib/images';
 import { collectFileGarbage } from './lib/files';
@@ -104,6 +105,7 @@ function MainApp() {
               <Route path="/family/account" element={<FamilyAccountPage />} />
               <Route path="/performance" element={<PerformanceDashboard />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/recitals" element={<RecitalsPage />} />
               <Route path="/recitals/:id" element={<RecitalDetailPage />} />
               <Route path="/show-day" element={<ShowDayIndexPage />} />

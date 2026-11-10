@@ -49,12 +49,35 @@ One central database feeds five portals. **Viewing as** (bottom of the sidebar) 
 | **Photos** | Upload photos (or take one on a phone) for every costume, prop and dancer. Pick a main photo, add captions, view full size. Main photos appear as thumbnails in lists and can be included in printouts |
 | **Settings** | Studio name, costume and prop ID prefixes, dancer levels, size options, volunteer skills, categories, CSV exports, full JSON backup and restore, remove or reload sample data |
 
-## Roadmap (not built yet)
+## Platform modules
 
-These parts of the full brief are still to come. Several need a server and outside services before they can work for real:
+| Section | What you can do |
+| --- | --- |
+| **Invoices & Payments** | Financial dashboard with charts (revenue by month, category, event/program and school year), outstanding and overdue balances. Invoices with multiple lines, discounts, tax, due dates, drafts, send, void (with reason), duplicate and full history. Monthly tuition generation (no double-billing, sibling discount), costume invoicing for a whole class or recital, late fees. Record cash/check/bank/card-terminal payments, partial payments, refunds (partial or full), family credits (issue, apply, move between invoices, remove — all audited). Printable invoices, receipts and family statements; CSV exports. Parents see balances, invoices, receipts and pay online in **test mode** |
+| **Recitals** | Recital theme, dates, venue, times, rehearsals, picture day and ticket info. Numbers per class or team with song, artist, music file, teacher, costume from inventory (never duplicated), accessories, shoes/tights, hair/makeup, entrances and duration; drag to reorder; one click adds a number for every class |
+| **Show Day & Backstage** | Running order built from a recital (with intermissions), drag-and-drop reorder with calculated start times, quick-change detection with tight changes flagged, quick-change helpers and locations, dancer check-in (checked in → backstage → ready → on stage → finished → released) with bulk actions and dressing rooms, backstage crew roles, warm-up/stage rehearsal/stage manager/instructions. Printable running order, audience program, check-in sheet and quick-change plan |
+| **Costume Checkout** | Reserve, check out and return costumes with accessories checklist, condition in/out, missing items, due dates and overdue tracking; returns can open a repair job. Availability for every costume, reserve everything for a performance in one click, and conflict alerts (double-booked across same-day performances, not enough pieces, in repair, checked out elsewhere, accessories short) with recorded overrides |
+| **Teams & Companies** | Rosters, coaches, classes, requirements, rehearsal and competition schedules, fees (invoice the whole team), move dancers between teams, archive |
+| **Events & Sign-ups** | Competitions, workshops, parties, picture day and more with eligibility (all / classes / teams / chosen dancers), deadlines, capacity with automatic waiting list, custom questions, and automatic invoicing. Parents sign up, decline or cancel; the next person on the waiting list moves up |
+| **Registration** | Public online registration form (`#/register`) and parent-portal registration and class changes. Office review approves without creating duplicate families or dancers, enrolls or waitlists, records policy agreements and invoices the registration fee |
+| **Policies & Signatures** | Versioned policies for all families, classes, teams or chosen families; typed e-signatures with name, date/time and version; annual renewal; deadlines; paper signatures recorded by the office; editing the text creates a new version that must be signed again |
+| **Fundraisers** | Donations, product sales and events with goals, progress, per-dancer totals, orders with delivery tracking; family purchases are invoiced or paid online (test mode) |
+| **Ticketing** | Ticket types (general, reserved, VIP, student, complimentary, staff), quantities, sales windows, seating chart with seat selection, online purchases (test mode), box office sales, refunds that release seats, will-call list |
+| **Communications** | Emails, text alerts (320-character limit, SMS consent respected) and newsletters built from sections (headings, text, images, buttons, announcements, auto-filled events and dates). Recipients by class, team, family, dancer, event, recital, performance or staff; templates; scheduling in Eastern time; delivery report per recipient. Everyone has an **Inbox** in their portal with unread counts |
+| **Notifications & Reminders** | Automatic reminders (tuition due, overdue invoices, missing signatures, events, registration deadlines, recitals, costume returns, call times, rehearsals, missing costumes, repairs) with per-type on/off, days before and channels; each sent only once. Manual notifications, scheduled for a later date if needed |
+| **Media Library** | Upload photos, music, videos, flyers and documents (drag and drop); categories, visibility, descriptions, links to classes/costumes/recitals/families/etc.; previews and downloads. Used by newsletters, class videos, recital music, policies and the website |
+| **Class Videos & Notes** | Teachers upload videos or private YouTube/Vimeo links for their classes (combination, choreography, practice…), choose who can watch, and keep class notes (optionally shared with families). Parents see only their dancers' classes |
+| **Schedule Requests** | Teachers ask to cancel, move or cover a class or take time off; the office approves (cancellations update the calendar and notify families) or declines with a reason |
+| **Website** | Pages from templates (Home, About, Classes, Faculty, Registration, Schedule, Events, Recitals, Teams, Contact, Portal login) built from sections, with drag-and-drop ordering, colours, alignment, spacing, background photos, galleries and video; site fonts, colours, tagline and logo; desktop/tablet/mobile preview; autosaved drafts, preview, publish, unpublish and discard. The public site (`#/site`) pulls classes, schedule, faculty, events and recitals live — never private data |
+| **Analytics** | Enrollment by class, age, level and style, class capacity, retention vs. the previous year, attendance by month and class, teacher hours and load, revenue, fundraising, costume availability and usage, event participation and tickets; filter by school year; every chart has a table view and CSV download |
+| **Settings** | Tabs for studio information & logo, billing rules (tuition due day, tax, sibling discount, late fee & grace period, registration fee, payment methods, refund policy, invoice categories), programs & options (dance styles, age groups, accessory types, quick-change threshold), and reminders. Renaming an option updates every record that uses it |
 
-- **Needs a server and/or accounts with outside services:** secure login and invitations; online payments, invoices, refunds and credits (Stripe); email and newsletters (an email provider); SMS alerts (Twilio); private cloud storage for class videos and the media library; ticket sales.
-- **Can be built in the current app:** recitals with class-by-class song, costume and running order; company and competition teams; events with sign-ups; registration and enrollment requests; policies with acknowledgements; fundraisers; costume checkout and return tracking; costume conflict alerts across performances; backstage check-in and quick-change schedules; the website builder; a reports and analytics centre with charts.
+## Not connected yet (by design)
+
+- **Logins** are a "Viewing as" preview, not secure sign-in.
+- **Online payments** run in test mode: no card is charged and no card numbers are collected or stored. Office-recorded cash/check/bank payments are real records.
+- **Email and SMS** aren't sent: messages and reminders are delivered to portal inboxes, and every delivery is marked "provider not connected".
+- **Files** (media, videos) are stored in this browser's IndexedDB. Files up to 8 MB are included in the backup; larger videos stay on this device.
 
 ## Data storage
 
@@ -68,7 +91,7 @@ These parts of the full brief are still to come. Several need a server and outsi
 
 ## Sample data
 
-On first launch the app loads 8 dancers, 12 costumes, 6 props, 4 volunteers, 3 categories, 3 storage locations, 2 shows with cast lists, and a performance plan with costume assignments. Every sample record has a **Sample** tag. **Settings → Remove sample data** deletes it all and keeps anything you entered yourself.
+On first launch the app loads sample families, staff, classes, a recital with a running order, invoices and payments, teams, events, policies, fundraisers, a ticketed show, messages, plus 8 dancers, 12 costumes, 6 props, 4 volunteers, 3 categories, 3 storage locations, 2 shows with cast lists, and a performance plan with costume assignments. Every sample record has a **Sample** tag. **Settings → Remove sample data** deletes it all and keeps anything you entered yourself.
 
 ## Running it
 
