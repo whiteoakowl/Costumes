@@ -12,6 +12,12 @@ import {
   Music,
   PackageOpen,
   Printer,
+  ClipboardSignature,
+  FileSignature,
+  HandCoins,
+  PartyPopper,
+  Ticket,
+  Trophy,
   Receipt,
   School,
   Shirt,
@@ -62,6 +68,11 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/family/costumes', label: 'Recitals & Costumes', icon: Shirt, section: 'My Family', show: parent },
   { to: '/family/account', label: 'Family Account', icon: Users, section: 'My Family', show: parent },
   { to: '/family/billing', label: 'Invoices & Payments', icon: Receipt, section: 'My Family', show: parent },
+  { to: '/family/events', label: 'Events & Sign-ups', icon: PartyPopper, section: 'Activities', show: parent },
+  { to: '/family/register', label: 'Registration', icon: ClipboardSignature, section: 'Activities', show: parent },
+  { to: '/family/policies', label: 'Policies & Forms', icon: FileSignature, section: 'Activities', show: parent },
+  { to: '/family/fundraisers', label: 'Fundraisers', icon: HandCoins, section: 'Activities', show: parent },
+  { to: '/family/tickets', label: 'Tickets', icon: Ticket, section: 'Activities', show: parent },
 
   // people
   { to: '/dancers', label: 'Dancers', icon: Users, section: 'People', show: (v) => admin(v) && v.can('dancers.view') },
@@ -75,6 +86,14 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/calendar', label: 'Calendar', icon: CalendarDays, section: 'Classes', show: (v) => admin(v) && v.can('classes.view') },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck, section: 'Classes', show: (v) => admin(v) && (v.can('attendance.viewAll') || v.can('attendance.take')) },
   { to: '/hours', label: 'Teacher Hours & Payroll', icon: Clock, section: 'Classes', show: (v) => admin(v) && (v.can('hours.approve') || v.can('payroll.view')) },
+
+  // engagement
+  { to: '/registration', label: 'Registration', icon: ClipboardSignature, section: 'Programs', show: (v) => admin(v) && v.can('events.manage') },
+  { to: '/teams', label: 'Teams & Companies', icon: Trophy, section: 'Programs', show: (v) => (admin(v) || perf(v) || teacher(v)) && (v.can('events.manage') || v.can('shows.view')) },
+  { to: '/events', label: 'Events & Sign-ups', icon: PartyPopper, section: 'Programs', show: (v) => admin(v) && v.can('events.manage') },
+  { to: '/policies', label: 'Policies & Signatures', icon: FileSignature, section: 'Programs', show: (v) => admin(v) && v.can('events.manage') },
+  { to: '/fundraisers', label: 'Fundraisers', icon: HandCoins, section: 'Programs', show: (v) => admin(v) && v.can('events.manage') },
+  { to: '/tickets', label: 'Ticketing', icon: Ticket, section: 'Programs', show: (v) => (admin(v) || perf(v)) && (v.can('events.manage') || v.can('productions.manage')) },
 
   // money
   { to: '/invoices', label: 'Invoices & Payments', icon: Receipt, section: 'Billing', show: (v) => admin(v) && v.can('billing.view') },

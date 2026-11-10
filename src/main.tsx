@@ -37,6 +37,8 @@ import { PerformanceDashboard } from './pages/PerformancePortal';
 import { ReportsPage } from './pages/Reports';
 import { PrintPage } from './pages/Print';
 import { CheckoutPage, RecitalDetailPage, RecitalsPage, ShowDayIndexPage, ShowDayPage } from './pages/Productions';
+import { EventDetailPage, EventsPage, FundraiserDetailPage, FundraisersPage, PoliciesPage, PolicyDetailPage, RegistrationsPage, TeamDetailPage, TeamsPage, TicketEventPage, TicketsPage } from './pages/Engagement';
+import { ParentEventsPage, ParentFundraisersPage, ParentPoliciesPage, ParentRegisterPage, ParentTicketsPage, PublicRegisterPage } from './pages/FamilyEngagement';
 import { FinancePage, InvoiceDetailPage, ParentBillingPage } from './pages/Finance';
 import { collectGarbage } from './lib/images';
 import { getDb } from './data/store';
@@ -50,6 +52,7 @@ function App() {
           <Routes>
             {/* Printable reports render without the app chrome. */}
             <Route path="/print/:report" element={<PrintPage />} />
+            <Route path="/register" element={<PublicRegisterPage />} />
             <Route path="*" element={<MainApp />} />
           </Routes>
         </EditorProvider>
@@ -99,6 +102,22 @@ function MainApp() {
               <Route path="/show-day" element={<ShowDayIndexPage />} />
               <Route path="/show-day/:id" element={<ShowDayPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/teams" element={<TeamsPage />} />
+              <Route path="/teams/:id" element={<TeamDetailPage />} />
+              <Route path="/events" element={<EventsPage />} />
+              <Route path="/events/:id" element={<EventDetailPage />} />
+              <Route path="/registration" element={<RegistrationsPage />} />
+              <Route path="/policies" element={<PoliciesPage />} />
+              <Route path="/policies/:id" element={<PolicyDetailPage />} />
+              <Route path="/fundraisers" element={<FundraisersPage />} />
+              <Route path="/fundraisers/:id" element={<FundraiserDetailPage />} />
+              <Route path="/tickets" element={<TicketsPage />} />
+              <Route path="/tickets/:id" element={<TicketEventPage />} />
+              <Route path="/family/events" element={<ParentEventsPage />} />
+              <Route path="/family/register" element={<ParentRegisterPage />} />
+              <Route path="/family/policies" element={<ParentPoliciesPage />} />
+              <Route path="/family/fundraisers" element={<ParentFundraisersPage />} />
+              <Route path="/family/tickets" element={<ParentTicketsPage />} />
               <Route path="/invoices" element={<FinancePage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="/family/billing" element={<ParentBillingPage />} />

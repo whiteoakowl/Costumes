@@ -1,3 +1,4 @@
+import { FamilyTodoCard } from './FamilyEngagement';
 import { FamilyRecitalCard } from './Productions';
 import { useState } from 'react';
 import { CalendarDays, ClipboardCheck, HeartPulse, Mail, Pencil, Phone, Plus, School, Shirt, ShieldAlert, Theater, UserRound } from 'lucide-react';
@@ -56,6 +57,7 @@ export function FamilyDashboard() {
         <StatCard label="Attendance rate" value={attendanceRate(recentAtt) === null ? '—' : `${attendanceRate(recentAtt)}%`} icon={<ClipboardCheck size={20} />} tone="sage" to="/family/attendance" />
         <StatCard label="Upcoming performances" value={perfs.length} icon={<Theater size={20} />} tone="amber" to="/family/costumes" />
       </div>
+      <FamilyTodoCard db={db} familyId={family.id} />
       <div className="dash-grid">
         <Card title="Next Two Weeks" icon={<CalendarDays size={18} />} className="span-2">
           {!upcoming.length ? (
