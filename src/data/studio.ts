@@ -302,6 +302,13 @@ export const PERMISSIONS = {
   'volunteers.view': 'View volunteers',
   'announcements.post': 'Post announcements',
   'reports.view': 'Reports & printing',
+  'billing.view': 'View invoices, payments & balances',
+  'billing.edit': 'Create invoices, record payments, refunds & credits',
+  'productions.manage': 'Recitals, running orders, backstage & costume checkout',
+  'events.manage': 'Teams, events, registration, policies, fundraisers & tickets',
+  'comms.send': 'Send messages, newsletters & notifications',
+  'media.manage': 'Media library & class videos',
+  'website.edit': 'Edit & publish the website',
   'accounts.manage': 'Manage accounts & permissions',
   'settings.edit': 'Application settings & data',
 } as const;
@@ -312,12 +319,12 @@ const ALL = Object.keys(PERMISSIONS) as Permission[];
 export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
   owner: ALL,
   office_admin: ALL.filter((p) => p !== 'accounts.manage'),
-  office_assistant: ['dancers.view', 'dancers.edit', 'families.view', 'families.edit', 'staff.view', 'classes.view', 'attendance.viewAll', 'attendance.take', 'costumes.view', 'costumes.edit', 'shows.view', 'volunteers.view', 'reports.view'],
-  teacher: ['attendance.take', 'costumes.view', 'shows.view', 'announcements.post'],
+  office_assistant: ['dancers.view', 'dancers.edit', 'families.view', 'families.edit', 'staff.view', 'classes.view', 'attendance.viewAll', 'attendance.take', 'costumes.view', 'costumes.edit', 'shows.view', 'volunteers.view', 'reports.view', 'billing.view', 'events.manage', 'comms.send', 'media.manage'],
+  teacher: ['attendance.take', 'costumes.view', 'shows.view', 'announcements.post', 'comms.send'],
   assistant_teacher: ['attendance.take', 'costumes.view', 'shows.view'],
   parent: [],
   dancer: [],
-  performance_staff: ['costumes.view', 'costumes.edit', 'shows.view', 'shows.edit', 'volunteers.view', 'reports.view'],
+  performance_staff: ['costumes.view', 'costumes.edit', 'shows.view', 'shows.edit', 'volunteers.view', 'reports.view', 'productions.manage', 'media.manage'],
 };
 
 export const roleLabels: Record<Role, string> = {

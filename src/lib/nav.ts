@@ -9,6 +9,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Printer,
+  Receipt,
   School,
   Shirt,
   Theater,
@@ -57,6 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/family/attendance', label: 'Attendance', icon: ClipboardCheck, section: 'My Family', show: parent },
   { to: '/family/costumes', label: 'Recitals & Costumes', icon: Shirt, section: 'My Family', show: parent },
   { to: '/family/account', label: 'Family Account', icon: Users, section: 'My Family', show: parent },
+  { to: '/family/billing', label: 'Invoices & Payments', icon: Receipt, section: 'My Family', show: parent },
 
   // people
   { to: '/dancers', label: 'Dancers', icon: Users, section: 'People', show: (v) => admin(v) && v.can('dancers.view') },
@@ -70,6 +72,9 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/calendar', label: 'Calendar', icon: CalendarDays, section: 'Classes', show: (v) => admin(v) && v.can('classes.view') },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck, section: 'Classes', show: (v) => admin(v) && (v.can('attendance.viewAll') || v.can('attendance.take')) },
   { to: '/hours', label: 'Teacher Hours & Payroll', icon: Clock, section: 'Classes', show: (v) => admin(v) && (v.can('hours.approve') || v.can('payroll.view')) },
+
+  // money
+  { to: '/invoices', label: 'Invoices & Payments', icon: Receipt, section: 'Billing', show: (v) => admin(v) && v.can('billing.view') },
 
   // costumes
   { to: '/costumes', label: 'Costumes', icon: Shirt, section: 'Costumes', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('costumes.view') },

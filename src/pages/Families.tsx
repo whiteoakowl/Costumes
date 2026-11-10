@@ -1,3 +1,4 @@
+import { FamilyBillingCard } from './Finance';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { HeartPulse, Link2, Mail, Pencil, Phone, Plus, ShieldAlert, Star, Trash2, UserPlus, Users, UsersRound } from 'lucide-react';
@@ -404,6 +405,7 @@ export function FamilyDetailPage() {
               </ul>
             )}
           </Card>
+          {v.can('billing.view') && <FamilyBillingCard familyId={f.id} />}
           <Card title="Logins">
             {!accounts.length ? (
               <p className="faint pad small">No parent logins yet.{v.can('accounts.manage') && <> Create one under <Link to="/accounts">Accounts & Access</Link>.</>}</p>

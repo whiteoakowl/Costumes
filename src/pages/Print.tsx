@@ -37,6 +37,7 @@ import { photosFor } from '../components/photos';
 import { formatLocal } from '../components/work';
 import { toLocalDay } from './Repairs';
 import type { Costume, Database, ID, ItemKind, OwnerType } from '../data/types';
+import { PlatformReport, platformReports, type PlatformReportKey } from './PrintPlatform';
 
 /* -------------------------------------------------------------- opening */
 
@@ -53,7 +54,8 @@ export type ReportKey =
   | 'performances'
   | 'performance'
   | 'volunteers'
-  | 'storage';
+  | 'storage'
+  | PlatformReportKey;
 
 /** Open a printable report in a new tab (falls back to the same tab if pop-ups are blocked). */
 export function openPrint(report: ReportKey, params: Record<string, string | undefined> = {}) {
@@ -65,7 +67,7 @@ export function openPrint(report: ReportKey, params: Record<string, string | und
 
 /* ---------------------------------------------------------------- shell */
 
-function PrintShell({ title, subtitle, children, photos, setPhotos }: { title: string; subtitle?: ReactNode; children: ReactNode; photos?: boolean; setPhotos?: (v: boolean) => void }) {
+export function PrintShell({ title, subtitle, children, photos, setPhotos }: { title: string; subtitle?: ReactNode; children: ReactNode; photos?: boolean; setPhotos?: (v: boolean) => void }) {
   const db = useDb();
   useEffect(() => {
     document.title = `${title} — ${db.settings.studioName}`;
@@ -139,7 +141,7 @@ function PrintPhoto({ id, caption }: { id: ID; caption: string }) {
   );
 }
 
-function Empty({ children }: { children: ReactNode }) {
+export function Empty({ children }: { children: ReactNode }) {
   return <p className="p-empty">{children}</p>;
 }
 
@@ -182,6 +184,7 @@ export function PrintPage() {
     case 'storage':
       return <StorageReport {...props} />;
     default:
+      if (platformReports.includes(report as PlatformReportKey)) return <PlatformReport report={report as PlatformReportKey} db={db} p={p} />;
       return (
         <PrintShell title="Report not found">
           <Empty>

@@ -3171,3 +3171,60 @@ a.quick-btn {
   gap: 6px;
   margin-top: auto;
 }
+
+/* ===================================================== charts (v5) */
+.chart { position: relative; padding-top: 20px; }
+.chart-toggle { position: absolute; top: -8px; right: 0; z-index: 2; }
+.chart-table { margin-top: 18px; }
+.bars { display: grid; grid-template-columns: auto 1fr; gap: 8px; padding: 10px 0 26px; }
+.bars-grid { display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: var(--muted); text-align: right; }
+.bars-tick { height: 0; display: flex; align-items: center; justify-content: flex-end; }
+.bars-plot { position: relative; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--line-strong);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% 50%; background-position: 0 0; }
+.bar-slot { position: relative; flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; outline: none; }
+.bar { width: min(70%, 26px); background: var(--rose); border-radius: 4px 4px 0 0; min-height: 0; position: relative; transition: background 0.15s; }
+.bar.hot, .bar-slot:focus-visible .bar { background: var(--rose-ink); }
+.bar-label { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--ink); white-space: nowrap; padding-bottom: 2px; }
+.bar-x { position: absolute; top: 100%; font-size: 10.5px; color: var(--muted); padding-top: 5px; white-space: nowrap; }
+.chart-tip { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--charcoal); color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 12px; display: grid; gap: 2px; white-space: nowrap; z-index: 3; pointer-events: none; }
+.chart-tip .faint { color: #ddd; }
+.hbars { display: grid; gap: 8px; }
+.hbar-row { display: grid; grid-template-columns: minmax(90px, 38%) 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.hbar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.hbar-track { height: 10px; background: transparent; border-radius: 0 4px 4px 0; }
+.hbar { display: block; height: 100%; background: var(--rose); border-radius: 0 4px 4px 0; min-width: 2px; }
+.hbar-row:hover .hbar { background: var(--rose-ink); }
+.hbar-value { font-variant-numeric: tabular-nums; color: var(--ink); }
+.progress { position: relative; height: 10px; background: var(--blush); border-radius: 6px; overflow: hidden; }
+.progress span { display: block; height: 100%; background: var(--sage); border-radius: 6px; }
+.progress em { position: absolute; right: 6px; top: -18px; font-size: 11px; font-style: normal; color: var(--muted); }
+.progress-wrap { padding-top: 16px; }
+
+/* ===================================================== finance (v5) */
+.line-items { display: grid; gap: 8px; }
+.line-row { display: grid; grid-template-columns: 2.2fr 1.2fr 1fr 70px 100px 90px auto; gap: 6px; align-items: center; }
+.line-row.three { grid-template-columns: 2fr 1.2fr 110px auto; margin-bottom: 6px; }
+.line-total { text-align: right; font-variant-numeric: tabular-nums; }
+.totals { display: flex; gap: 18px; justify-content: flex-end; flex-wrap: wrap; padding: 8px 0; color: var(--ink); }
+.test-mode { background: var(--amber-bg); border: 1px solid #f0d9b0; border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+.mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.mini-stats > div { background: var(--cream); border-radius: var(--radius-sm); padding: 10px 12px; display: grid; }
+.mini-stats strong { font-size: 18px; }
+.mini-stats span { font-size: 12px; color: var(--muted); }
+.stack-tight { display: grid; gap: 6px; align-content: start; padding-top: 24px; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.invoice-lines tfoot td { border-bottom: none; padding-top: 4px; padding-bottom: 4px; }
+@media (max-width: 760px) {
+  .line-row { grid-template-columns: 1fr 1fr; }
+  .line-row.three { grid-template-columns: 1fr 1fr; }
+}
+
+/* ===================================================== print sheets (v5) */
+.p-cols { display: flex; gap: 24px; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; font-size: 13px; }
+.p-studio { display: grid; gap: 2px; }
+.p-box { font-size: 16px; text-align: center; width: 30px; }
+.p-warn td { background: #fdf0e3; }
+.p-table tr.p-break td { background: #f4efe9; font-style: italic; }
+.p-program { list-style: none; padding: 0; display: grid; gap: 12px; columns: 2; }
+.p-program li { break-inside: avoid; margin-bottom: 10px; }
+.p-prog-break { text-align: center; font-style: italic; }
