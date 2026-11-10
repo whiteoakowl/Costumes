@@ -29,7 +29,7 @@ export function addSampleStudio(db: Database): Database {
     startDate: firstWeekday(startYear, 9, 1),
     endDate: `${startYear + 1}-06-13`,
     registrationStart: `${startYear}-07-01`,
-    registrationEnd: `${startYear}-09-30`,
+    registrationEnd: `${startYear + 1}-05-31`,
     status: (db.schoolYears.some((x) => x.status === 'current') ? 'planning' : 'current') as 'current' | 'planning',
     tuitionNotes: 'Monthly tuition due on the 1st. Sibling discount 10%.',
     recitalInfo: 'Spring Recital in June — see Shows.',

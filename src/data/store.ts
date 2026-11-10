@@ -3,6 +3,8 @@ import type { Database } from './types';
 import { buildSampleData, addSamplePropsAndVolunteers, addSampleWorkOrders } from './sample';
 import { addSampleStudio } from './sampleStudio';
 import { ensureOwnerAccount } from './studio';
+import { addSamplePlatform } from './samplePlatform';
+import { ensureWebsite } from './website';
 import { ensureWorkOrders } from './workflow';
 export { newId, nowIso, todayStr } from './ids';
 
@@ -18,7 +20,7 @@ export { newId, nowIso, todayStr } from './ids';
  */
 
 export const STORAGE_KEY = 'studio-costume-manager/v1';
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export class ValidationError extends Error {}
 
@@ -36,6 +38,39 @@ export function emptyDatabase(): Database {
       studioEmail: '',
       studioAddress: '',
       payPeriod: 'biweekly',
+      studioWebsite: '',
+      socialLinks: '',
+      businessHours: 'Mon–Thu 3:30–9:00 PM · Sat 9:00 AM–2:00 PM',
+      logoFileId: null,
+      ageGroups: ['Tiny (3–5)', 'Junior (6–9)', 'Intermediate (10–12)', 'Teen (13–18)', 'Adult'],
+      invoiceCategories: ['Tuition', 'Registration', 'Costume', 'Recital', 'Competition', 'Company', 'Event', 'Fundraiser', 'Private lesson', 'Merchandise', 'Other'],
+      paymentMethods: ['card', 'cash', 'check', 'ach', 'other'],
+      defaultTaxRate: 0,
+      tuitionDueDay: 1,
+      lateFee: 15,
+      lateFeeGraceDays: 10,
+      siblingDiscountPercent: 10,
+      refundPolicy: 'Tuition and costume fees are non-refundable once costumes are ordered. Contact the office with questions.',
+      allowPartialPayments: true,
+      registrationFee: 35,
+      quickChangeMinutes: 6,
+      accessoryCategories: ['Headpiece', 'Tights', 'Gloves', 'Shoes', 'Hair accessories', 'Jewelry', 'Skirt', 'Props'],
+      reminders: [
+        { kind: 'tuition_due', enabled: true, daysBefore: 3, channels: ['email', 'inapp'] },
+        { kind: 'invoice_overdue', enabled: true, daysBefore: 0, channels: ['email', 'inapp'] },
+        { kind: 'policy_missing', enabled: true, daysBefore: 7, channels: ['email', 'inapp'] },
+        { kind: 'event_upcoming', enabled: true, daysBefore: 3, channels: ['email', 'inapp'] },
+        { kind: 'registration_deadline', enabled: true, daysBefore: 5, channels: ['email', 'inapp'] },
+        { kind: 'recital_reminder', enabled: true, daysBefore: 7, channels: ['email', 'sms', 'inapp'] },
+        { kind: 'checkout_due', enabled: true, daysBefore: 2, channels: ['inapp'] },
+        { kind: 'return_overdue', enabled: true, daysBefore: 0, channels: ['email', 'inapp'] },
+        { kind: 'call_time', enabled: true, daysBefore: 1, channels: ['sms', 'inapp'] },
+        { kind: 'rehearsal', enabled: true, daysBefore: 2, channels: ['email', 'inapp'] },
+        { kind: 'missing_costume', enabled: true, daysBefore: 14, channels: ['inapp'] },
+        { kind: 'repair_needed', enabled: true, daysBefore: 0, channels: ['inapp'] },
+      ],
+      site: { font: 'Cormorant Garamond', primary: '#a8676d', accent: '#c98f8f', background: '#fbf6f1', text: '#2f2a2c', tagline: 'Where every dancer shines' },
+      nextInvoiceNumber: 1,
       skills: ['Sewing', 'Alterations', 'Hair & makeup', 'Backstage / stage crew', 'Quick changes / dressing', 'Set building', 'Ushering', 'Ticketing', 'Photography', 'Chaperone'],
     },
     dancers: [],
@@ -68,6 +103,37 @@ export function emptyDatabase(): Database {
     notices: [],
     announcements: [],
     activity: [],
+    invoices: [],
+    payments: [],
+    refunds: [],
+    credits: [],
+    recitals: [],
+    recitalNumbers: [],
+    lineup: [],
+    performanceExtras: [],
+    checkIns: [],
+    quickChanges: [],
+    backstageRoles: [],
+    checkouts: [],
+    conflictOverrides: [],
+    teams: [],
+    signupEvents: [],
+    eventRegistrations: [],
+    registrations: [],
+    policies: [],
+    policySignatures: [],
+    fundraisers: [],
+    fundraiserTransactions: [],
+    ticketEvents: [],
+    ticketOrders: [],
+    messages: [],
+    messageTemplates: [],
+    notifications: [],
+    media: [],
+    classVideos: [],
+    classNotes: [],
+    scheduleRequests: [],
+    sitePages: [],
   };
 }
 
@@ -110,6 +176,14 @@ export function normalizeDatabase(raw: unknown): Database {
   if (fromVersion < 4) {
     if (db.dancers.some((d) => d.isSample) && !db.classes.length) addSampleStudio(db);
     ensureOwnerAccount(db);
+  }
+  // Version 5 added the platform modules (finance, recitals, teams, events…).
+  if (fromVersion < 5) {
+    // Settings added in v5 that are lists of objects need their defaults if missing.
+    if (!Array.isArray(db.settings.reminders) || !db.settings.reminders.length) db.settings.reminders = base.settings.reminders;
+    db.settings.site = { ...base.settings.site, ...(db.settings.site ?? {}) };
+    if (db.dancers.some((d) => d.isSample) && !db.invoices.length && !db.recitals.length) addSamplePlatform(db);
+    ensureWebsite(db);
   }
   db.meta.schemaVersion = SCHEMA_VERSION;
   return db;

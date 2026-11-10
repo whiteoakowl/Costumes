@@ -113,6 +113,31 @@ export function pruneOrphans(db: Database) {
   const volunteerIds = new Set(db.volunteers.map((v) => v.id));
   for (const w of db.workOrders) if (w.volunteerId && !volunteerIds.has(w.volunteerId)) w.volunteerId = null;
   db.photos = db.photos.filter((p) => (p.ownerType === 'dancer' ? dancerIds.has(p.ownerId) : costumeIds.has(p.ownerId)));
+  // Platform modules: drop references to deleted dancers / costumes / classes (financial records are kept).
+  if (Array.isArray(db.lineup)) {
+    const classSet = new Set(db.classes.map((c) => c.id));
+    for (const l of db.lineup) {
+      l.dancerIds = l.dancerIds.filter((d) => dancerIds.has(d));
+      if (l.costumeId && !costumeIds.has(l.costumeId)) l.costumeId = null;
+      if (l.classId && !classSet.has(l.classId)) l.classId = null;
+    }
+    for (const n of db.recitalNumbers) {
+      if (n.costumeId && !costumeIds.has(n.costumeId)) n.costumeId = null;
+      if (n.classId && !classSet.has(n.classId)) n.classId = null;
+    }
+    for (const t of db.teams) {
+      t.dancerIds = t.dancerIds.filter((d) => dancerIds.has(d));
+      t.classIds = t.classIds.filter((c) => classSet.has(c));
+    }
+    db.checkIns = db.checkIns.filter((c) => dancerIds.has(c.dancerId));
+    db.quickChanges = db.quickChanges.filter((q) => dancerIds.has(q.dancerId));
+    db.checkouts = db.checkouts.filter((c) => costumeIds.has(c.costumeId));
+    for (const c of db.checkouts) if (c.dancerId && !dancerIds.has(c.dancerId)) c.dancerId = null;
+    db.eventRegistrations = db.eventRegistrations.filter((r) => dancerIds.has(r.dancerId));
+    db.classVideos = db.classVideos.filter((v) => classSet.has(v.classId));
+    db.classNotes = db.classNotes.filter((n) => classSet.has(n.classId));
+    for (const e of db.signupEvents) e.dancerIds = e.dancerIds.filter((d) => dancerIds.has(d));
+  }
   // Studio management: enrollments follow their dancer & class; attendance history is kept.
   if (Array.isArray(db.enrollments)) {
     const classIds = new Set(db.classes.map((c) => c.id));

@@ -242,6 +242,27 @@ export interface Settings {
   studioAddress: string;
   /** Payroll period length used for summaries. */
   payPeriod: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+  /* v5 */
+  studioWebsite: string;
+  socialLinks: string;
+  businessHours: string;
+  logoFileId: string | null;
+  ageGroups: string[];
+  invoiceCategories: string[];
+  paymentMethods: PaymentMethod[];
+  defaultTaxRate: number;
+  tuitionDueDay: number;
+  lateFee: number;
+  lateFeeGraceDays: number;
+  siblingDiscountPercent: number;
+  refundPolicy: string;
+  allowPartialPayments: boolean;
+  registrationFee: number;
+  quickChangeMinutes: number;
+  accessoryCategories: string[];
+  reminders: ReminderRule[];
+  site: { font: string; primary: string; accent: string; background: string; text: string; tagline: string };
+  nextInvoiceNumber: number;
 }
 
 export interface Meta {
@@ -272,6 +293,10 @@ export interface UserAccount extends Base {
   permissions: string[] | null;
   lastActiveAt: string;
   notes: string;
+  /** Notification channels this person wants (v5). */
+  notifyEmail?: boolean;
+  notifySms?: boolean;
+  notifyInApp?: boolean;
 }
 
 export interface Family extends Base {
@@ -497,6 +522,617 @@ export interface Database {
   notices: Notice[];
   announcements: Announcement[];
   activity: ActivityEntry[];
+  invoices: Invoice[];
+  payments: Payment[];
+  refunds: Refund[];
+  credits: CreditEntry[];
+  recitals: Recital[];
+  recitalNumbers: RecitalNumber[];
+  lineup: LineupItem[];
+  performanceExtras: PerformanceExtras[];
+  checkIns: CheckIn[];
+  quickChanges: QuickChangeAssignment[];
+  backstageRoles: BackstageRole[];
+  checkouts: CostumeCheckout[];
+  conflictOverrides: ConflictOverride[];
+  teams: Team[];
+  signupEvents: SignupEvent[];
+  eventRegistrations: EventRegistration[];
+  registrations: RegistrationRequest[];
+  policies: Policy[];
+  policySignatures: PolicySignature[];
+  fundraisers: Fundraiser[];
+  fundraiserTransactions: FundraiserTransaction[];
+  ticketEvents: TicketedEvent[];
+  ticketOrders: TicketOrder[];
+  messages: Message[];
+  messageTemplates: MessageTemplate[];
+  notifications: AppNotification[];
+  media: MediaFile[];
+  classVideos: ClassVideo[];
+  classNotes: ClassNote[];
+  scheduleRequests: ScheduleRequest[];
+  sitePages: SitePage[];
 }
 
 export type TableName = Exclude<keyof Database, 'meta' | 'settings'>;
+
+/* ============================================ platform modules (schema v5) */
+
+export interface AuditEntry {
+  at: string;
+  by: string;
+  change: string;
+}
+
+/* ---- finance ---- */
+
+export interface InvoiceLine {
+  id: ID;
+  description: string;
+  category: string; // settings.invoiceCategories
+  quantity: number;
+  unitPrice: number;
+  dancerId: ID | null;
+}
+
+export type InvoiceSource = 'tuition' | 'registration' | 'costume' | 'recital' | 'competition' | 'company' | 'event' | 'fundraiser' | 'private' | 'ticket' | 'custom';
+
+export interface Invoice extends Base {
+  number: string; // INV-0001
+  familyId: ID;
+  title: string;
+  lines: InvoiceLine[];
+  discount: number; // amount off the subtotal
+  taxRate: number; // percent
+  issueDate: string;
+  dueDate: string;
+  /** draft = not visible to the family; sent = visible & payable; void = cancelled. Paid / overdue are calculated. */
+  state: 'draft' | 'sent' | 'void';
+  notes: string;
+  source: InvoiceSource;
+  sourceId: ID | null; // recital, event, fundraiser, team…
+  schoolYearId: ID | null;
+  remindersSent: number;
+  history: AuditEntry[];
+}
+
+export type PaymentMethod = 'card' | 'cash' | 'check' | 'ach' | 'other';
+
+export interface Payment extends Base {
+  familyId: ID;
+  invoiceId: ID | null; // null = general payment (e.g. tickets)
+  amount: number;
+  method: PaymentMethod;
+  /** test = simulated online payment (no card is charged); offline = recorded by staff. */
+  processor: 'test' | 'offline';
+  reference: string; // check number, transaction id…
+  date: string;
+  recordedBy: string;
+  note: string;
+}
+
+export interface Refund extends Base {
+  paymentId: ID;
+  familyId: ID;
+  amount: number;
+  date: string;
+  /** processor = refunded through the (test) payment processor; offline = staff recorded an authorized offline refund. */
+  method: 'processor' | 'offline';
+  status: 'pending' | 'completed';
+  reason: string;
+  recordedBy: string;
+}
+
+export interface CreditEntry extends Base {
+  familyId: ID;
+  /** issued (+) adds to the family's credit; applied/removed (−) use it; unapplied (+) takes it back off an invoice. */
+  kind: 'issued' | 'applied' | 'unapplied' | 'removed';
+  amount: number; // always positive
+  invoiceId: ID | null;
+  reason: string;
+  recordedBy: string;
+}
+
+/* ---- recitals & performances ---- */
+
+export interface Recital extends Base {
+  name: string;
+  theme: string;
+  schoolYearId: ID | null;
+  showId: ID | null; // linked Show (casts & costume lists)
+  startDate: string;
+  endDate: string;
+  venue: string;
+  address: string;
+  performanceTimes: string;
+  rehearsalSchedule: string;
+  pictureDay: string;
+  ticketInfo: string;
+  notes: string;
+  status: 'planning' | 'active' | 'completed';
+}
+
+export interface RecitalNumber extends Base {
+  recitalId: ID;
+  order: number;
+  title: string;
+  classId: ID | null;
+  teamId: ID | null;
+  teacherId: ID | null;
+  style: string;
+  song: string;
+  artist: string;
+  songFileId: ID | null; // media library
+  choreographyNotes: string;
+  costumeId: ID | null; // existing inventory — never duplicated
+  accessoryNotes: string;
+  shoesTights: string;
+  hairMakeup: string;
+  entranceExit: string;
+  durationMin: number;
+}
+
+export interface LineupItem extends Base {
+  performanceId: ID;
+  order: number;
+  kind: 'number' | 'intermission' | 'break';
+  numberId: ID | null; // RecitalNumber it came from
+  title: string;
+  classId: ID | null;
+  teacherId: ID | null;
+  dancerIds: ID[];
+  song: string;
+  artist: string;
+  costumeId: ID | null;
+  durationMin: number;
+  entranceExit: string;
+  backstageNotes: string;
+}
+
+export interface PerformanceExtras extends Base {
+  performanceId: ID;
+  warmUpTime: string;
+  stageRehearsal: string; // YYYY-MM-DDTHH:MM
+  stageManagerId: ID | null;
+  specialInstructions: string;
+  teacherIds: ID[];
+}
+
+export type CheckInStatus = 'not_arrived' | 'checked_in' | 'backstage' | 'ready' | 'on_stage' | 'finished' | 'checked_out';
+
+export interface CheckIn extends Base {
+  performanceId: ID;
+  dancerId: ID;
+  status: CheckInStatus;
+  dressingRoom: string;
+  notes: string;
+  history: AuditEntry[];
+}
+
+export interface QuickChangeAssignment extends Base {
+  performanceId: ID;
+  dancerId: ID;
+  toItemId: ID; // the number they are changing into
+  helper: string;
+  location: string;
+  notes: string;
+}
+
+export interface BackstageRole extends Base {
+  performanceId: ID;
+  role: string; // e.g. Stage left dresser, Rack monitor
+  person: string;
+  volunteerId: ID | null;
+  staffId: ID | null;
+  area: string;
+  notes: string;
+}
+
+export type CheckoutStatus = 'reserved' | 'checked_out' | 'returned' | 'needs_inspection' | 'needs_repair';
+
+export interface CostumeCheckout extends Base {
+  costumeId: ID;
+  dancerId: ID | null;
+  familyId: ID | null;
+  ownerType: OwnerType | null;
+  ownerId: ID | null;
+  quantity: number;
+  status: CheckoutStatus;
+  checkedOutAt: string;
+  expectedReturn: string;
+  returnedAt: string;
+  conditionOut: string;
+  conditionIn: string;
+  accessoriesIssued: string[];
+  accessoriesReturned: string[];
+  missingItems: string;
+  notes: string;
+  history: AuditEntry[];
+}
+
+export interface ConflictOverride extends Base {
+  key: string;
+  reason: string;
+  by: string;
+}
+
+/* ---- teams, events, registration, policies, fundraisers, tickets ---- */
+
+export interface Team extends Base {
+  name: string;
+  description: string;
+  schoolYearId: ID | null;
+  dancerIds: ID[];
+  teacherIds: ID[];
+  classIds: ID[];
+  requirements: string;
+  rehearsalSchedule: string;
+  competitionSchedule: string;
+  fee: number;
+  feeNotes: string;
+  notes: string;
+  archived: boolean;
+}
+
+export interface EventQuestion {
+  id: ID;
+  label: string;
+  type: 'text' | 'yesno' | 'choice';
+  options: string[];
+  required: boolean;
+}
+
+export type SignupEventType = 'recital' | 'competition' | 'convention' | 'workshop' | 'master_class' | 'fundraiser' | 'party' | 'picture_day' | 'rehearsal' | 'audition' | 'camp' | 'community' | 'other';
+
+export interface SignupEvent extends Base {
+  name: string;
+  type: SignupEventType;
+  description: string;
+  date: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  address: string;
+  registrationDeadline: string;
+  eligibility: 'all' | 'classes' | 'teams' | 'dancers';
+  classIds: ID[];
+  teamIds: ID[];
+  dancerIds: ID[];
+  cost: number;
+  capacity: number; // 0 = unlimited
+  signupsOpen: boolean;
+  questions: EventQuestion[];
+  notes: string;
+}
+
+export interface EventRegistration extends Base {
+  eventId: ID;
+  dancerId: ID;
+  familyId: ID | null;
+  status: 'registered' | 'waitlist' | 'declined' | 'cancelled';
+  answers: Record<string, string>;
+  invoiceId: ID | null;
+  by: string;
+}
+
+export interface RegistrationRequest extends Base {
+  schoolYearId: ID | null;
+  status: 'pending' | 'approved' | 'denied';
+  kind: 'new' | 'change';
+  familyId: ID | null;
+  parent: { firstName: string; lastName: string; email: string; phone: string; relationship: string };
+  address: string;
+  dancer: { firstName: string; lastName: string; birthday: string; clothingSize: string; shoeSize: string; level: string; allergies: string; medicalNotes: string };
+  existingDancerId: ID | null;
+  classIds: ID[];
+  dropClassIds: ID[];
+  emergency: { name: string; relationship: string; phone: string };
+  agreedPolicyIds: ID[];
+  fee: number;
+  invoiceId: ID | null;
+  notes: string;
+  reviewNote: string;
+  reviewedBy: string;
+  reviewedAt: string;
+  submittedBy: string;
+  result: string;
+}
+
+export interface PolicyVersion {
+  version: number;
+  body: string;
+  fileId: ID | null;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface Policy extends Base {
+  title: string;
+  category: string;
+  versions: PolicyVersion[];
+  audience: 'all' | 'classes' | 'teams' | 'families';
+  classIds: ID[];
+  teamIds: ID[];
+  familyIds: ID[];
+  requiresSignature: boolean;
+  deadline: string;
+  annualRenewal: boolean;
+  active: boolean;
+}
+
+export interface PolicySignature extends Base {
+  policyId: ID;
+  version: number;
+  familyId: ID;
+  guardianId: ID | null;
+  signerName: string;
+  signedAt: string;
+  method: 'typed' | 'acknowledged';
+  schoolYearId: ID | null;
+  ip: string; // not collected in browser-only mode
+}
+
+export interface FundraiserItem {
+  id: ID;
+  name: string;
+  price: number;
+}
+
+export interface Fundraiser extends Base {
+  name: string;
+  description: string;
+  type: 'donation' | 'product_sale' | 'event' | 'other';
+  purpose: string;
+  startDate: string;
+  endDate: string;
+  goal: number;
+  teamId: ID | null;
+  dancerIds: ID[];
+  requirements: string;
+  paymentOptions: string;
+  items: FundraiserItem[];
+  notes: string;
+  status: 'open' | 'closed';
+}
+
+export interface FundraiserTransaction extends Base {
+  fundraiserId: ID;
+  familyId: ID | null;
+  dancerId: ID | null;
+  donorName: string;
+  kind: 'donation' | 'order';
+  items: { itemId: ID; qty: number }[];
+  amount: number;
+  invoiceId: ID | null;
+  notes: string;
+  fulfilled: boolean;
+}
+
+export interface TicketType {
+  id: ID;
+  name: string;
+  category: 'general' | 'reserved' | 'vip' | 'student' | 'comp' | 'staff';
+  price: number;
+  quantity: number;
+}
+
+export interface TicketedEvent extends Base {
+  name: string;
+  performanceId: ID | null;
+  recitalId: ID | null;
+  date: string;
+  time: string;
+  venue: string;
+  salesOpen: string;
+  salesClose: string;
+  types: TicketType[];
+  seatingRows: number; // 0 = no seating chart
+  seatsPerRow: number;
+  notes: string;
+  status: 'draft' | 'on_sale' | 'closed';
+}
+
+export interface TicketOrder extends Base {
+  ticketEventId: ID;
+  familyId: ID | null;
+  buyerName: string;
+  buyerEmail: string;
+  lines: { typeId: ID; qty: number; unitPrice: number }[];
+  seats: string[];
+  total: number;
+  status: 'paid' | 'refunded' | 'cancelled';
+  paymentId: ID | null;
+  source: 'parent' | 'box_office';
+}
+
+/* ---- communications & notifications ---- */
+
+export type Channel = 'email' | 'sms' | 'newsletter';
+
+export interface RecipientSpec {
+  kind: 'all_families' | 'families' | 'guardians' | 'dancers' | 'classes' | 'teams' | 'teachers' | 'all_staff' | 'event' | 'recital' | 'performance';
+  ids: ID[];
+}
+
+export interface NewsletterBlock {
+  id: ID;
+  type: 'heading' | 'text' | 'image' | 'button' | 'announcement' | 'events' | 'dates' | 'divider';
+  text: string;
+  url: string;
+  fileId: ID | null;
+}
+
+export interface Delivery {
+  name: string;
+  contact: string;
+  familyId: ID | null;
+  staffId: ID | null;
+  /** in_app = delivered to the person's portal inbox; skipped = no consent / no contact; external delivery needs a provider. */
+  status: 'in_app' | 'skipped_no_consent' | 'skipped_no_contact';
+  external: 'not_connected';
+}
+
+export interface Message extends Base {
+  channel: Channel;
+  subject: string;
+  body: string;
+  blocks: NewsletterBlock[];
+  recipients: RecipientSpec[];
+  deliveries: Delivery[];
+  attachmentIds: ID[];
+  status: 'draft' | 'scheduled' | 'sent';
+  scheduledFor: string; // YYYY-MM-DDTHH:MM (Eastern)
+  sentAt: string;
+  sender: string;
+  related: { type: string; id: ID } | null;
+  readBy: ID[]; // account ids (in-app)
+}
+
+export interface MessageTemplate extends Base {
+  name: string;
+  channel: Channel;
+  subject: string;
+  body: string;
+  blocks: NewsletterBlock[];
+}
+
+export type ReminderKind =
+  | 'tuition_due'
+  | 'invoice_overdue'
+  | 'policy_missing'
+  | 'event_upcoming'
+  | 'registration_deadline'
+  | 'recital_reminder'
+  | 'checkout_due'
+  | 'return_overdue'
+  | 'call_time'
+  | 'rehearsal'
+  | 'missing_costume'
+  | 'repair_needed';
+
+export interface ReminderRule {
+  kind: ReminderKind;
+  enabled: boolean;
+  daysBefore: number;
+  channels: ('email' | 'sms' | 'inapp')[];
+}
+
+export interface AppNotification extends Base {
+  key: string; // dedupe key — the same reminder is never created twice
+  kind: ReminderKind | 'manual';
+  title: string;
+  body: string;
+  familyIds: ID[];
+  staffIds: ID[];
+  admin: boolean;
+  link: string;
+  channels: ('email' | 'sms' | 'inapp')[];
+  status: 'pending' | 'sent' | 'failed';
+  sendOn: string; // YYYY-MM-DD
+  sentAt: string;
+  failure: string;
+  readBy: ID[];
+}
+
+/* ---- media, videos, notes, requests ---- */
+
+export type MediaCategory =
+  | 'costume_photo'
+  | 'class_video'
+  | 'recital_photo'
+  | 'recital_music'
+  | 'choreography_video'
+  | 'policy'
+  | 'signed_agreement'
+  | 'teacher_document'
+  | 'performance_schedule'
+  | 'event_flyer'
+  | 'newsletter'
+  | 'website_image'
+  | 'fundraiser'
+  | 'other';
+
+export interface MediaLink {
+  type: 'costume' | 'class' | 'recitalNumber' | 'recital' | 'family' | 'performance' | 'event' | 'fundraiser' | 'policy' | 'website' | 'staff';
+  id: ID;
+}
+
+export interface MediaFile extends Base {
+  name: string;
+  mime: string;
+  size: number;
+  category: MediaCategory;
+  description: string;
+  links: MediaLink[];
+  visibility: 'management' | 'staff' | 'parents' | 'public';
+  uploadedBy: string;
+}
+
+export interface ClassVideo extends Base {
+  classId: ID;
+  schoolYearId: ID | null;
+  teacherId: ID | null;
+  title: string;
+  description: string;
+  lessonDate: string;
+  fileId: ID | null;
+  url: string; // or an external link (YouTube unlisted, Vimeo…)
+  kind: 'combination' | 'choreography' | 'practice' | 'rehearsal' | 'instructions';
+  visibility: 'teacher' | 'parents' | 'dancers' | 'management';
+  notes: string;
+}
+
+export interface ClassNote extends Base {
+  classId: ID;
+  date: string;
+  body: string;
+  author: string;
+  shareWithFamilies: boolean;
+}
+
+export interface ScheduleRequest extends Base {
+  staffId: ID;
+  classId: ID | null;
+  date: string;
+  kind: 'cancel' | 'substitute' | 'move' | 'time_off' | 'other';
+  details: string;
+  status: 'pending' | 'approved' | 'declined';
+  response: string;
+  respondedBy: string;
+}
+
+/* ---- website ---- */
+
+export type SiteBlockType = 'hero' | 'text' | 'image' | 'gallery' | 'video' | 'button' | 'columns' | 'classes' | 'faculty' | 'events' | 'schedule' | 'contact' | 'announcements' | 'recitals' | 'teams' | 'portal_login' | 'spacer' | 'cta' | 'registration';
+
+export interface SiteBlock {
+  id: ID;
+  type: SiteBlockType;
+  heading: string;
+  text: string;
+  buttonLabel: string;
+  buttonLink: string;
+  imageId: ID | null;
+  imageIds: ID[];
+  videoUrl: string;
+  columns: { heading: string; text: string }[];
+  bg: string;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  padding: 'sm' | 'md' | 'lg';
+  bgImageId: ID | null;
+}
+
+export interface SitePage extends Base {
+  title: string;
+  slug: string;
+  inNav: boolean;
+  order: number;
+  published: boolean;
+  draft: SiteBlock[];
+  live: SiteBlock[];
+  publishedAt: string;
+  description: string;
+}
