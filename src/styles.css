@@ -3097,3 +3097,77 @@ a.quick-btn {
     padding-top: 10px;
   }
 }
+
+/* portal switcher */
+.portal-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -6px 4px 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rose-ink);
+}
+.portal-switch:hover,
+.portal-switch.active {
+  text-decoration: none;
+  border-color: var(--rose);
+  background: #fff;
+}
+.preview-banner .btn {
+  margin-left: auto;
+}
+.portal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+.portal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.portal-card.current {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 2px rgba(201, 143, 143, 0.25), var(--shadow);
+}
+.portal-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.portal-head h3 {
+  font-family: var(--serif);
+  font-size: 23px;
+}
+.portal-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--rose), var(--rose-deep));
+}
+.portal-card.portal-office .portal-icon {
+  background: linear-gradient(135deg, #d6b07a, #b08744);
+}
+.portal-card.portal-teacher .portal-icon {
+  background: linear-gradient(135deg, #8fa6c9, #5f7896);
+}
+.portal-card.portal-parent .portal-icon {
+  background: linear-gradient(135deg, #9cc0a5, #6f9278);
+}
+.portal-card.portal-performance .portal-icon {
+  background: linear-gradient(135deg, #b89acb, #8e6f8e);
+}
+.portal-accounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, Lock, Menu, Settings, Sparkles, X } from 'lucide-react';
+import { ArrowLeftRight, Eye, Lock, Menu, Settings, Sparkles, X } from 'lucide-react';
 import { useDb } from '../data/store';
 import { countSampleRecords } from '../data/actions';
 import { touchAccount } from '../data/studioActions';
@@ -84,6 +84,12 @@ export function Layout({ children }: { children: ReactNode }) {
             <X size={18} />
           </button>
         </div>
+        <NavLink to="/portals" className={({ isActive }) => `portal-switch ${isActive ? 'active' : ''}`}>
+          <ArrowLeftRight size={15} />
+          <span>
+            {portalLabels[v.portal]} <span className="faint">· switch portal</span>
+          </span>
+        </NavLink>
         <nav className="nav">
           {items.map(({ to, label, icon: Icon, end, section }) => {
             if (seen.has(to + label)) return null;
@@ -130,6 +136,9 @@ export function Layout({ children }: { children: ReactNode }) {
             <span>
               Previewing the <strong>{portalLabels[v.portal]}</strong> as <strong>{v.account.displayName}</strong> ({roleLabels[v.account.role]}). Browser-only preview — not a secure login.
             </span>
+            <Link to="/portals" className="btn btn-ghost btn-sm">
+              Switch portal
+            </Link>
           </div>
         )}
         <main className="content">

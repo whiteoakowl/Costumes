@@ -23,6 +23,7 @@ import { SettingsPage } from './pages/Settings';
 import { EmptyState } from './components/ui';
 import { RepairsPage } from './pages/Repairs';
 import { AccountsPage } from './pages/Accounts';
+import { PortalsPage } from './pages/Portals';
 import { FamiliesPage, FamilyDetailPage } from './pages/Families';
 import { StaffDetailPage, StaffPage } from './pages/Staff';
 import { SchoolYearsPage } from './pages/SchoolYears';
@@ -68,6 +69,7 @@ function MainApp() {
               <Route path="/" element={<Home />} />
               <Route path="/repairs" element={<RepairsPage />} />
               <Route path="/accounts" element={<AccountsPage />} />
+              <Route path="/portals" element={<PortalsPage />} />
               <Route path="/families" element={<FamiliesPage />} />
               <Route path="/families/:id" element={<FamilyDetailPage />} />
               <Route path="/staff" element={<StaffPage />} />

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { GraduationCap, Mail, Pencil, Phone, Plus, Power, Trash2 } from 'lucide-react';
+import { GraduationCap, KeyRound, Mail, Pencil, Phone, Plus, Power, Trash2 } from 'lucide-react';
 import { useDb } from '../data/store';
-import { deleteStaff, saveStaff, setStaffStatus, type StaffInput } from '../data/studioActions';
+import { deleteStaff, saveAccount, saveStaff, setStaffStatus, type StaffInput } from '../data/studioActions';
 import { fullName } from '../data/selectors';
 import { enrolledDancerIds, hoursKindLabels, occurrencesBetween, payrollSummary, positionLabels, staffName, WEEKDAY_NAMES } from '../data/studio';
 import { Badge, Card, DataTable, EmptyState, Field, PageHeader, SampleTag, SearchInput, Tabs, type Column } from '../components/ui';
@@ -229,6 +229,29 @@ export function StaffDetailPage() {
               <button className="btn btn-ghost" onClick={() => run(() => setStaffStatus(s.id, s.status === 'active' ? 'inactive' : 'active'), s.status === 'active' ? 'Deactivated.' : 'Reactivated.')}>
                 <Power size={16} /> {s.status === 'active' ? 'Deactivate' : 'Reactivate'}
               </button>
+              {v.can('accounts.manage') && !db.accounts.some((a) => a.staffId === s.id) && ['teacher', 'assistant', 'substitute', 'office', 'performance'].includes(s.position) && (
+                <button
+                  className="btn btn-ghost"
+                  onClick={() =>
+                    run(
+                      () =>
+                        saveAccount({
+                          displayName: staffName(s),
+                          email: s.email,
+                          role: s.position === 'assistant' ? 'assistant_teacher' : s.position === 'office' ? 'office_assistant' : s.position === 'performance' ? 'performance_staff' : 'teacher',
+                          staffId: s.id,
+                          guardianId: null,
+                          dancerId: null,
+                          permissions: null,
+                          notes: '',
+                        }),
+                      `Login created for ${s.firstName}. Open it from Switch portal.`,
+                    )
+                  }
+                >
+                  <KeyRound size={16} /> Create {s.position === 'office' ? 'office' : s.position === 'performance' ? 'performance' : 'teacher'} login
+                </button>
+              )}
               <button className="btn btn-primary" onClick={() => setEditing(true)}>
                 <Pencil size={16} /> Edit
               </button>
