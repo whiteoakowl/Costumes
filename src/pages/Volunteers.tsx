@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { CalendarClock, CalendarHeart, Download, HandHeart, Mail, MessageSquare, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
+import { CalendarClock, CalendarHeart, Download, HandHeart, Mail, MessageSquare, Pencil, Phone, Plus, Trash2 , Printer, Wrench} from 'lucide-react';
 import { useDb } from '../data/store';
 import { deleteVolunteers } from '../data/actions';
 import { availableSlots, formatDate, formatTime, isUpcomingPerformance, slotLabel, sortedSlots, volunteerName } from '../data/selectors';
@@ -8,6 +8,9 @@ import { BulkBar, Card, DataTable, EmptyState, PageHeader, SampleTag, SearchInpu
 import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
 import { exportVolunteers } from '../lib/export';
+import { openPrint } from './Print';
+import { WorkOrderTable } from '../components/work';
+import { isOpenOrder } from '../data/workflow';
 import { todayStr } from '../data/ids';
 import type { ID, Volunteer } from '../data/types';
 
@@ -118,6 +121,9 @@ export function VolunteersPage() {
         subtitle={`${db.volunteers.length} volunteer${db.volunteers.length === 1 ? '' : 's'} helping your studio`}
         actions={
           <>
+            <button className="btn btn-ghost" onClick={() => openPrint('volunteers')} disabled={!db.volunteers.length}>
+              <Printer size={16} /> Print list
+            </button>
             <button className="btn btn-ghost" onClick={() => exportVolunteers(db)} disabled={!db.volunteers.length}>
               <Download size={16} /> Export CSV
             </button>
@@ -300,6 +306,15 @@ export function VolunteerDetailPage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </Card>
+          <Card title="Repair & Cleaning Jobs" icon={<Wrench size={18} />} actions={<Link to="/repairs" className="btn btn-ghost btn-sm">All jobs</Link>}>
+            <WorkOrderTable orders={db.workOrders.filter((w) => w.volunteerId === v.id && isOpenOrder(w))} showVolunteer={false} empty="No open jobs assigned. Assign repairs and cleaning from the Repair & Cleaning page." />
+            {db.workOrders.some((w) => w.volunteerId === v.id && !isOpenOrder(w)) && (
+              <details className="work-history">
+                <summary>Completed jobs ({db.workOrders.filter((w) => w.volunteerId === v.id && !isOpenOrder(w)).length})</summary>
+                <WorkOrderTable orders={db.workOrders.filter((w) => w.volunteerId === v.id && !isOpenOrder(w)).sort((a, b) => b.completedAt.localeCompare(a.completedAt))} showVolunteer={false} />
+              </details>
             )}
           </Card>
           <Card title="Available For Upcoming Performances" icon={<CalendarHeart size={18} />}>

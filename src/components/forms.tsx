@@ -322,26 +322,35 @@ export function StatusDialog({ open, onClose, costumeIds, initial }: { open: boo
   const [status, setStatus] = useState<CostumeStatus>(initial);
   const [reason, setReason] = useState<ProgressReason | null>(initial === 'in_progress' ? 'repair' : null);
   const [note, setNote] = useState('');
+  const [volunteerId, setVolunteerId] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [dueDate, setDueDate] = useState('');
   useEffect(() => {
     if (open) {
       setStatus(initial);
       setReason(initial === 'in_progress' ? 'repair' : null);
       setNote('');
+      setVolunteerId('');
+      setScheduledAt('');
+      setDueDate('');
     }
   }, [open, initial]);
+  const volunteerOptions = [...db.volunteers]
+    .sort((a, b) => a.firstName.localeCompare(b.firstName))
+    .map((v) => ({ value: v.id, label: `${v.firstName} ${v.lastName}`.trim(), hint: v.skills.slice(0, 2).join(', ') || undefined }));
   const names = costumeIds.map((id) => db.costumes.find((c) => c.id === id)?.name).filter(Boolean);
   const submit = () => {
     const ok = run(
       () => {
-        setCostumeStatus(costumeIds, status, reason, note);
+        setCostumeStatus(costumeIds, status, reason, note, status === 'in_progress' ? { volunteerId: volunteerId || null, scheduledAt, dueDate } : {});
         return true;
       },
-      `${costumeIds.length === 1 ? names[0] : `${costumeIds.length} costumes`} marked ${status === 'ready' ? 'READY' : 'IN PROGRESS'}.`,
+      `${costumeIds.length === 1 ? names[0] : `${costumeIds.length} items`} marked ${status === 'ready' ? 'READY' : 'IN PROGRESS'}.`,
     );
     if (ok) onClose();
   };
   return (
-    <FormModal open={open} onClose={onClose} title="Update Costume Status" subtitle={names.length === 1 ? names[0] : `${names.length} costumes selected`} onSubmit={submit} saveLabel="Update status" size="sm">
+    <FormModal open={open} onClose={onClose} title="Update Status" subtitle={names.length === 1 ? names[0] : `${names.length} items selected`} onSubmit={submit} saveLabel="Update status" size="sm">
       <StatusPicker
         status={status}
         reason={reason}
@@ -351,8 +360,24 @@ export function StatusDialog({ open, onClose, costumeIds, initial }: { open: boo
         }}
       />
       <Field label={status === 'in_progress' ? 'What needs to be done?' : 'Completion note (optional)'} hint="Saved to the notes log with today's date">
-        <textarea className="input" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder={status === 'in_progress' ? 'e.g. Hem is coming down on the left side' : 'e.g. Hem repaired and pressed'} />
+        <textarea className="input" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder={status === 'in_progress' ? (reason === 'cleaning' ? 'e.g. Dry clean, makeup on collar' : 'e.g. Hem is coming down on the left side') : 'e.g. Hem repaired and pressed'} />
       </Field>
+      {status === 'in_progress' && (
+        <>
+          <Field label="Assign a volunteer" hint={!volunteerOptions.length ? 'Add volunteers on the Volunteers page' : 'Optional — shows on the Repair & Cleaning page'}>
+            <SearchSelect ariaLabel="Assign a volunteer" value={volunteerId} onChange={setVolunteerId} options={volunteerOptions} noneLabel="Not assigned yet" />
+          </Field>
+          <div className="grid-2">
+            <Field label="Scheduled date / time">
+              <input className="input" type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+            </Field>
+            <Field label="Needed back by">
+              <input className="input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </Field>
+          </div>
+        </>
+      )}
+      {status === 'ready' && <p className="small faint">Any open repair / cleaning work orders for {costumeIds.length === 1 ? 'this item' : 'these items'} will be marked complete.</p>}
     </FormModal>
   );
 }

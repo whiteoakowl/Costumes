@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { CalendarHeart, Copy, Download, Pencil, Plus, Theater, Trash2 } from 'lucide-react';
+import { CalendarHeart, Copy, Download, Pencil, Plus, Theater, Trash2 , Printer} from 'lucide-react';
 import { useDb } from '../data/store';
 import { deleteShow, duplicateShow } from '../data/actions';
 import { buildOverview, byId, formatDate, formatTime, ownerCostumeIds, ownerDancerIds, showDateLabel, castsFor } from '../data/selectors';
@@ -9,6 +9,7 @@ import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
 import { AttentionList, CastManager, CostumeListPanel, CostumeOverviewTable, PropOverviewTable, ReadinessSummary } from '../components/casting';
 import { exportAssignments, exportCastLists, exportPropAssignments } from '../lib/export';
+import { openPrint } from './Print';
 import type { Show, ShowStatus } from '../data/types';
 
 export const SHOW_STATUS: Record<ShowStatus, { label: string; tone: 'info' | 'ready' | 'neutral' }> = {
@@ -92,9 +93,14 @@ export function ShowsPage() {
         title="Shows"
         subtitle="Productions, recitals and competitions"
         actions={
-          <button className="btn btn-primary" onClick={() => ed.editShow(undefined, { navigate: true })}>
-            <Plus size={16} /> Create show
-          </button>
+          <>
+            <button className="btn btn-ghost" onClick={() => openPrint('shows')} disabled={!db.shows.length}>
+              <Printer size={16} /> Print list
+            </button>
+            <button className="btn btn-primary" onClick={() => ed.editShow(undefined, { navigate: true })}>
+              <Plus size={16} /> Create show
+            </button>
+          </>
         }
       />
       <Card>
@@ -191,6 +197,9 @@ export function ShowDetailPage() {
               }}
             >
               <Copy size={16} /> Duplicate
+            </button>
+            <button className="btn btn-ghost" onClick={() => openPrint('show', { id: s.id })}>
+              <Printer size={16} /> Print show sheet
             </button>
             <button className="btn btn-primary" onClick={() => ed.editShow(s.id)}>
               <Pencil size={16} /> Edit show

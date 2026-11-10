@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { CalendarHeart, Clock, Copy, Download, Import, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarHeart, Clock, Copy, Download, Import, MapPin, Pencil, Plus, Trash2 , Printer} from 'lucide-react';
 import { useDb } from '../data/store';
 import { deletePerformance, duplicatePerformance, importShowCasts } from '../data/actions';
 import { buildOverview, byId, castsFor, formatDate, formatDateTime, formatTime, isUpcomingPerformance, ownerDancerIds } from '../data/selectors';
@@ -9,6 +9,7 @@ import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
 import { AttentionList, CastManager, CostumeListPanel, CostumeOverviewTable, PropOverviewTable, ReadinessSummary } from '../components/casting';
 import { AvailableVolunteersCard } from './Volunteers';
+import { openPrint } from './Print';
 import { exportAllPerformanceAssignments, exportAssignments, exportCastLists, exportPropAssignments } from '../lib/export';
 import type { PerformancePlan } from '../data/types';
 
@@ -114,6 +115,9 @@ export function PerformancesPage() {
         subtitle="Cast lists, costume assignments and readiness for every performance"
         actions={
           <>
+            <button className="btn btn-ghost" onClick={() => openPrint('performances')} disabled={!db.performances.length}>
+              <Printer size={16} /> Print schedule
+            </button>
             <button className="btn btn-ghost" onClick={() => exportAllPerformanceAssignments(db)} disabled={!db.performances.length}>
               <Download size={16} /> Export all assignments
             </button>
@@ -225,6 +229,9 @@ export function PerformanceDetailPage() {
               }}
             >
               <Copy size={16} /> Duplicate
+            </button>
+            <button className="btn btn-ghost" onClick={() => openPrint('performance', { id: p.id })}>
+              <Printer size={16} /> Print call sheet
             </button>
             <button className="btn btn-primary" onClick={() => ed.editPerformance(p.id)}>
               <Pencil size={16} /> Edit details

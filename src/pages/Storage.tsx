@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { MapPin, Pencil, Plus, Shirt, Trash2, Warehouse } from 'lucide-react';
+import { MapPin, Pencil, Plus, Shirt, Trash2, Warehouse , Printer} from 'lucide-react';
 import { useDb } from '../data/store';
 import { deleteLocation } from '../data/actions';
 import { accessoriesFor, byId, kindOf, sortedLocations } from '../data/selectors';
 import { itemLabels } from '../lib/labels';
+import { openPrint } from './Print';
 import { Badge, BulkBar, Card, DataTable, EmptyState, PageHeader, SampleTag, SearchInput, StatusBadge, type Column } from '../components/ui';
 import { useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
@@ -95,9 +96,14 @@ export function StoragePage() {
         title="Storage Locations"
         subtitle="Where every costume and prop physically lives"
         actions={
-          <button className="btn btn-primary" onClick={() => ed.editLocation()}>
-            <Plus size={16} /> Add location
-          </button>
+          <>
+            <button className="btn btn-ghost" onClick={() => openPrint('storage')}>
+              <Printer size={16} /> Print inventory
+            </button>
+            <button className="btn btn-primary" onClick={() => ed.editLocation()}>
+              <Plus size={16} /> Add location
+            </button>
+          </>
         }
       />
       <div className="loc-cards">
@@ -211,6 +217,9 @@ export function StorageDetailPage() {
           <>
             <button className="btn btn-ghost danger" onClick={() => del.ask(l, () => navigate('/storage'))}>
               <Trash2 size={16} /> Delete
+            </button>
+            <button className="btn btn-ghost" onClick={() => openPrint('storage', { id: l.id })}>
+              <Printer size={16} /> Print
             </button>
             <button className="btn btn-ghost" onClick={() => ed.editLocation(l.id)}>
               <Pencil size={16} /> Edit

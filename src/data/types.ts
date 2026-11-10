@@ -24,6 +24,8 @@
  * show / cast / dancer assignments. Costume-only views filter on kind.
  *
  *   Volunteer       1─* AvailabilitySlot   (embedded list on the volunteer)
+ *   Costume/prop    1─* WorkOrder *─1 Volunteer (repairs & cleaning)
+ *   Costume/prop/Dancer 1─* Photo           (photo.ownerType + ownerId; bytes in IndexedDB)
  */
 
 export type ID = string;
@@ -93,12 +95,50 @@ export type NoteType =
   | 'sizing'
   | 'status'
   | 'location'
+  | 'cleaning'
+  | 'work'
   | 'other';
 
 export interface CostumeNote extends Base {
   costumeId: ID;
   type: NoteType;
   text: string;
+  /** Set when the entry belongs to a repair / cleaning work order. */
+  workOrderId?: ID | null;
+  /** Volunteer involved in this entry, if any. */
+  volunteerId?: ID | null;
+}
+
+/**
+ * A repair / cleaning / alteration job for one costume or prop.
+ * While any work order on an item is open, the item is IN PROGRESS;
+ * completing the last one can mark it READY. Every change is written to the
+ * item's notes log (CostumeNote.workOrderId) so the history is never lost.
+ */
+export type WorkStatus = 'open' | 'in_progress' | 'done' | 'cancelled';
+
+export interface WorkOrder extends Base {
+  costumeId: ID;
+  type: ProgressReason;
+  status: WorkStatus;
+  description: string;
+  pieces: number; // how many of the item's quantity are involved
+  volunteerId: ID | null;
+  scheduledAt: string; // planned date/time 'YYYY-MM-DDTHH:MM' or ''
+  dueDate: string; // needed back by 'YYYY-MM-DD' or ''
+  startedAt: string; // 'YYYY-MM-DDTHH:MM' or ''
+  completedAt: string; // 'YYYY-MM-DDTHH:MM' or ''
+  completionNote: string;
+}
+
+/** Photo metadata. The image bytes live in the browser's IndexedDB (see lib/images.ts), keyed by photo id. */
+export interface Photo extends Base {
+  ownerType: 'item' | 'dancer';
+  ownerId: ID;
+  caption: string;
+  isPrimary: boolean;
+  width: number;
+  height: number;
 }
 
 export interface StorageLocation extends Base {
@@ -211,6 +251,8 @@ export interface Database {
   castMembers: CastMembership[];
   assignments: CostumeAssignment[];
   volunteers: Volunteer[];
+  workOrders: WorkOrder[];
+  photos: Photo[];
 }
 
 export type TableName = Exclude<keyof Database, 'meta' | 'settings'>;

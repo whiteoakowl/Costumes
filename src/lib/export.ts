@@ -2,6 +2,7 @@ import type { Database, ID, ItemKind, OwnerType } from '../data/types';
 import { accessoriesFor, ageFromBirthday, buildOverview, buildPropOverview, byId, castsFor, formatDateTime, fullName, issueLabels, itemsOf, slotLabel, sortedSlots, volunteerName } from '../data/selectors';
 import { progressReasonLabels } from '../data/actions';
 import { todayStr } from '../data/ids';
+import { exportImages } from './images';
 
 type Cell = string | number | boolean | null | undefined;
 
@@ -171,7 +172,10 @@ export function exportCastLists(db: Database, ownerType: OwnerType, ownerId: ID,
   download(`${slug(name)}-cast-lists-${todayStr()}.csv`, toCsv(['Cast', 'Dancer', 'Role', 'Level', 'Costume Size'], rows), 'text/csv;charset=utf-8');
 }
 
-export function exportBackup(db: Database) {
-  const payload = { app: 'Studio Costume Manager', exportedAt: new Date().toISOString(), ...db };
-  download(`studio-costume-backup-${todayStr()}.json`, JSON.stringify(payload, null, 2), 'application/json');
+/** Full backup: every table plus all photos (as embedded images). */
+export async function exportBackup(db: Database) {
+  const images = await exportImages((db.photos ?? []).map((p) => p.id)).catch(() => ({}));
+  const payload = { app: 'Studio Costume Manager', exportedAt: new Date().toISOString(), ...db, images };
+  download(`studio-costume-backup-${todayStr()}.json`, JSON.stringify(payload), 'application/json');
+  return Object.keys(images).length;
 }

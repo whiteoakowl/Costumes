@@ -1894,3 +1894,465 @@ input[type='checkbox'] {
     grid-column: 1 / -1;
   }
 }
+
+/* ------------------------------------------------------------- photos */
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--blush);
+  color: var(--rose-deep);
+}
+.avatar.round {
+  border-radius: 50%;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.with-avatar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+.photo-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 0;
+  background: var(--blush);
+  cursor: zoom-in;
+}
+.photo-tile img,
+.photo-tile .img-loading {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.photo-star {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--amber);
+  border-radius: 999px;
+  padding: 3px 5px;
+  display: grid;
+}
+.photo-caption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.photo-drop {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 28px 16px;
+  border: 2px dashed var(--line-strong);
+  border-radius: 14px;
+  background: #fffaf8;
+  color: var(--rose-deep);
+  cursor: pointer;
+}
+.photo-drop:hover {
+  border-color: var(--rose);
+  background: var(--blush);
+}
+.img-loading {
+  background: linear-gradient(90deg, var(--blush) 0%, #fff6f3 50%, var(--blush) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite linear;
+  min-height: 40px;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.lightbox {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lightbox-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: #2f2a2c;
+  border-radius: 14px;
+  min-height: 300px;
+  overflow: hidden;
+}
+.lightbox-img {
+  max-width: 100%;
+  max-height: 68vh;
+  display: block;
+}
+.lightbox-stage .img-loading {
+  width: 100%;
+  height: 50vh;
+}
+.lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: var(--charcoal) !important;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.lb-nav.prev {
+  left: 10px;
+}
+.lb-nav.next {
+  right: 10px;
+}
+@media (pointer: fine) {
+  .camera-btn {
+    display: none;
+  }
+}
+
+/* -------------------------------------------------------- work orders */
+
+.segmented.wrap {
+  flex-wrap: wrap;
+  border-radius: 14px;
+}
+.work-table td {
+  vertical-align: top;
+}
+.vol-cell {
+  min-width: 180px;
+}
+.work-history {
+  margin-top: 12px;
+}
+.work-history summary {
+  cursor: pointer;
+  color: var(--rose-ink);
+  font-weight: 500;
+  padding: 6px 0;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.stats.stats-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 700px) {
+  .stats.stats-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ------------------------------------------------------------ reports */
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+.report-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.report-card > .btn {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.report-head {
+  display: flex;
+  gap: 12px;
+}
+.report-head h3 {
+  font-family: var(--serif);
+  font-size: 21px;
+}
+.report-head p {
+  margin: 2px 0 0;
+}
+.report-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--blush);
+  color: var(--rose-deep);
+  flex-shrink: 0;
+}
+.report-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.report-options .input {
+  flex: 1;
+  min-width: 140px;
+}
+
+/* ------------------------------------------------------- print sheets */
+
+.print-root {
+  min-height: 100vh;
+  background: #ece6e3;
+  padding-bottom: 40px;
+}
+.print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  background: var(--warm-white);
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+}
+.print-toolbar-mid {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sheet {
+  background: #fff;
+  color: #222;
+  max-width: 1040px;
+  margin: 24px auto;
+  padding: 40px 44px;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.12);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  border-bottom: 2px solid var(--rose-deep);
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+}
+.sheet-studio {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rose-deep);
+}
+.sheet h1 {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.1;
+  margin: 2px 0;
+  color: #222;
+}
+.sheet h2 {
+  font-family: var(--serif);
+  font-size: 19px;
+  margin: 18px 0 6px;
+  color: #222;
+}
+.sheet-sub {
+  color: #555;
+}
+.sheet-date {
+  color: #777;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.p-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+.p-table th {
+  text-align: left;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #555;
+  border-bottom: 1.5px solid #999;
+  padding: 5px 6px;
+}
+.p-table td {
+  border-bottom: 1px solid #ddd;
+  padding: 5px 6px;
+  vertical-align: top;
+}
+.p-table tr {
+  break-inside: avoid;
+}
+.p-table thead {
+  display: table-header-group;
+}
+.p-table .strong,
+.sheet .strong {
+  font-weight: 600;
+}
+.sheet .faint {
+  color: #888;
+}
+.p-notes {
+  color: #666;
+  font-size: 11px;
+}
+.p-flag {
+  color: #b5525a;
+  font-weight: 600;
+}
+.p-check {
+  width: 26px;
+  text-align: center;
+  font-size: 15px;
+}
+.p-thumb {
+  width: 52px;
+}
+.p-thumb .avatar {
+  border-radius: 6px;
+}
+.p-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 0 12px;
+}
+.p-dl dt {
+  color: #777;
+}
+.p-dl dd {
+  margin: 0;
+}
+.p-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.p-empty {
+  color: #888;
+  font-style: italic;
+}
+.p-section {
+  margin-bottom: 14px;
+}
+.p-summary {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.p-summary .p-dl {
+  flex: 1;
+  min-width: 300px;
+}
+.p-ready {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 220px;
+}
+.p-ready strong {
+  font-family: var(--serif);
+  font-size: 26px;
+}
+.p-photos {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.p-photos figure {
+  margin: 0;
+  width: 180px;
+}
+.p-photos img,
+.p-photos .img-loading {
+  width: 180px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.p-photos figcaption {
+  font-size: 10.5px;
+  color: #666;
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  body,
+  .print-root {
+    background: #fff !important;
+  }
+  .no-print,
+  .toasts {
+    display: none !important;
+  }
+  .sheet {
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .p-cast + .p-cast,
+  .p-break {
+    break-before: page;
+  }
+  .sheet h2 {
+    break-after: avoid;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+@media (max-width: 700px) {
+  .sheet {
+    padding: 20px 16px;
+    margin: 0;
+    overflow-x: auto;
+  }
+}
+
+/* Action cells must stay real table cells so row borders line up. */
+td.row-actions {
+  display: table-cell;
+  text-align: right;
+  white-space: nowrap;
+}
+td.row-actions > * + * {
+  margin-left: 4px;
+}
+td .row-actions {
+  flex-wrap: nowrap;
+}

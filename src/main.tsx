@@ -19,6 +19,11 @@ import { PerformanceDetailPage, PerformancesPage } from './pages/Performances';
 import { StorageDetailPage, StoragePage } from './pages/Storage';
 import { SettingsPage } from './pages/Settings';
 import { EmptyState } from './components/ui';
+import { RepairsPage } from './pages/Repairs';
+import { ReportsPage } from './pages/Reports';
+import { PrintPage } from './pages/Print';
+import { collectGarbage } from './lib/images';
+import { getDb } from './data/store';
 
 function App() {
   return (
@@ -26,9 +31,24 @@ function App() {
     <HashRouter>
       <FeedbackProvider>
         <EditorProvider>
+          <Routes>
+            {/* Printable reports render without the app chrome. */}
+            <Route path="/print/:report" element={<PrintPage />} />
+            <Route path="*" element={<MainApp />} />
+          </Routes>
+        </EditorProvider>
+      </FeedbackProvider>
+    </HashRouter>
+  );
+}
+
+function MainApp() {
+  return (
           <Layout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/repairs" element={<RepairsPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
               <Route path="/dancers" element={<DancersPage />} />
               <Route path="/dancers/:id" element={<DancerProfilePage />} />
               <Route path="/costumes" element={<CostumesPage />} />
@@ -47,11 +67,11 @@ function App() {
               <Route path="*" element={<EmptyState title="Page not found" message="Use the menu to find your way back." />} />
             </Routes>
           </Layout>
-        </EditorProvider>
-      </FeedbackProvider>
-    </HashRouter>
   );
 }
+
+// Tidy up stored photo files that no longer belong to any record.
+setTimeout(() => collectGarbage(new Set((getDb().photos ?? []).map((p) => p.id))), 3000);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,16 +1,20 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { isOpenOrder, workTypeLabels } from '../data/workflow';
+import { WorkOrderDialog, isOverdue } from '../components/work';
 import { Link } from 'react-router-dom';
 import { CalendarHeart, CheckCircle2, Clock, Plus, Scissors, Shirt, Sparkles, Theater, Users, Warehouse, Wrench , HandHeart, Wand2} from 'lucide-react';
 import { useDb } from '../data/store';
 import { itemLabels } from '../lib/labels';
 import { Card, EmptyState, PageHeader, ProgressRing, StatCard, StatusBadge } from '../components/ui';
 import { useEditors } from '../components/editors';
-import { itemsOf, kindOf, buildOverview, byId, formatDate, formatDateTime, formatTime, isUpcomingPerformance, isUpcomingShow, ownerCostumeIds, ownerDancerIds } from '../data/selectors';
+import { volunteerName, itemsOf, kindOf, buildOverview, byId, formatDate, formatDateTime, formatTime, isUpcomingPerformance, isUpcomingShow, ownerCostumeIds, ownerDancerIds } from '../data/selectors';
 import type { Costume } from '../data/types';
 
 export function Dashboard() {
   const db = useDb();
   const ed = useEditors();
+  const [sending, setSending] = useState(false);
+  const openWork = db.workOrders.filter(isOpenOrder).sort((a, b) => Number(isOverdue(b)) - Number(isOverdue(a)) || (a.dueDate || '9999').localeCompare(b.dueDate || '9999'));
 
   const stats = useMemo(() => {
     const costumes = itemsOf(db, 'costume');
@@ -133,11 +137,39 @@ export function Dashboard() {
             <button className="quick-btn" onClick={() => ed.editVolunteer(undefined, { navigate: true })}>
               <HandHeart size={18} /> Add a volunteer
             </button>
+            <button className="quick-btn" onClick={() => setSending(true)}>
+              <Sparkles size={18} /> Send for repair / cleaning
+            </button>
           </div>
         </Card>
 
-        <Card title="Needs Repairs" icon={<Wrench size={18} />}>
-          <CostumeMiniList list={stats.repairs} empty="No costumes or props need repairs." locs={locs} />
+        <Card title="Repairs & Cleaning" icon={<Wrench size={18} />} actions={<Link to="/repairs" className="btn btn-ghost btn-sm">Open list</Link>}>
+          {!openWork.length ? (
+            <p className="faint pad">Nothing is out for repair or cleaning.</p>
+          ) : (
+            <ul className="mini-list">
+              {openWork.slice(0, 6).map((w) => {
+                const item = db.costumes.find((c) => c.id === w.costumeId);
+                if (!item) return null;
+                const vol = db.volunteers.find((v) => v.id === w.volunteerId);
+                return (
+                  <li key={w.id}>
+                    <div>
+                      <Link to={`${itemLabels[kindOf(item)].base}/${item.id}`} className="link-strong">
+                        {item.name}
+                      </Link>
+                      <div className="small faint">
+                        {workTypeLabels[w.type]} · {vol ? volunteerName(vol) : <span className="warn-text inline">not assigned</span>}
+                        {w.dueDate && ` · due ${formatDate(w.dueDate)}`}
+                      </div>
+                    </div>
+                    {isOverdue(w) && <span className="badge badge-danger">Overdue</span>}
+                  </li>
+                );
+              })}
+              {openWork.length > 6 && <li className="small faint">+ {openWork.length - 6} more</li>}
+            </ul>
+          )}
         </Card>
         <Card title="Being Altered" icon={<Scissors size={18} />}>
           <CostumeMiniList list={stats.altering} empty="Nothing is being altered." locs={locs} />
@@ -197,6 +229,7 @@ export function Dashboard() {
           )}
         </Card>
       </div>
+      <WorkOrderDialog open={sending} onClose={() => setSending(false)} />
     </>
   );
 }

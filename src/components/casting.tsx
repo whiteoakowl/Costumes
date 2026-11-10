@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowRightLeft, CheckCircle2, Copy, Pencil, Plus, Shirt, Trash2, UserMinus, UserPlus, Users, Wand2, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, CheckCircle2, Copy, Pencil, Plus, Shirt, Trash2, UserMinus, UserPlus, Users, Wand2, X , Printer} from 'lucide-react';
 import { Modal } from './Modal';
 import { Badge, Card, CheckList, EmptyState, Field, ProgressRing, SearchInput, SearchSelect, StatusBadge, type Option } from './ui';
 import { useConfirm, useRun } from './feedback';
@@ -24,6 +24,7 @@ import {
 import { accessoriesFor, buildOverview, buildPropOverview, itemsOf, byId, castsFor, fullName, issueLabels, ownerCostumeIds, sortedCategories, sortedDancers, type OverviewRow, type Readiness } from '../data/selectors';
 import type { CastList, Database, ID, ItemKind, OwnerType } from '../data/types';
 import { itemLabels } from '../lib/labels';
+import { openPrint } from '../pages/Print';
 
 const CAST_SUGGESTIONS: Record<OwnerType, string[]> = {
   show: ['Cast A', 'Cast B', 'Saturday Cast', 'Sunday Cast', 'Understudy Cast', 'Alternate Cast'],
@@ -63,9 +64,16 @@ export function CastManager({ ownerType, ownerId }: { ownerType: OwnerType; owne
       title="Cast Lists"
       icon={<Users size={18} />}
       actions={
-        <button className="btn btn-primary btn-sm" onClick={() => setNewOpen(true)}>
-          <Plus size={15} /> New cast list
-        </button>
+        <>
+          {casts.length > 0 && (
+            <button className="btn btn-ghost btn-sm" onClick={() => openPrint('casts', { owner: ownerType, id: ownerId })}>
+              <Printer size={15} /> Print cast lists
+            </button>
+          )}
+          <button className="btn btn-primary btn-sm" onClick={() => setNewOpen(true)}>
+            <Plus size={15} /> New cast list
+          </button>
+        </>
       }
     >
       {!casts.length ? (
@@ -146,6 +154,9 @@ function CastCard({ cast, casts, rows, onRename, onAdd, onDuplicate, onDelete }:
           </button>
           <button className="icon-btn" title="Rename" aria-label={`Rename ${cast.name}`} onClick={onRename}>
             <Pencil size={16} />
+          </button>
+          <button className="icon-btn" title="Print this cast list" aria-label={`Print ${cast.name}`} onClick={() => openPrint('casts', { owner: cast.ownerType, id: cast.ownerId, cast: cast.id })}>
+            <Printer size={16} />
           </button>
           <button className="icon-btn" title="Duplicate" aria-label={`Duplicate ${cast.name}`} onClick={onDuplicate}>
             <Copy size={16} />

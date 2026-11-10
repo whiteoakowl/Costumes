@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Download, Pencil, Plus, Shirt, Theater, Trash2, Users , Wand2} from 'lucide-react';
+import { Download, Pencil, Plus, Shirt, Theater, Trash2, Users , Wand2, Printer} from 'lucide-react';
 import { useDb } from '../data/store';
 import { bulkUpdateDancers, deleteDancers } from '../data/actions';
 import { kindOf, ageFromBirthday, dancerCostumes, dancerParticipation, formatDate, fullName, sortedDancers } from '../data/selectors';
@@ -8,6 +8,8 @@ import { Badge, BulkBar, Card, DataTable, EmptyState, PageHeader, SampleTag, Sea
 import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
 import { exportDancers } from '../lib/export';
+import { Avatar, PhotoGallery } from '../components/photos';
+import { openPrint } from './Print';
 import type { Dancer, ID } from '../data/types';
 
 export function DancersPage() {
@@ -46,12 +48,15 @@ export function DancersPage() {
       key: 'full',
       header: 'Full Name',
       render: (d) => (
-        <>
-          <Link to={`/dancers/${d.id}`} className="link-strong">
-            {fullName(d)}
-          </Link>
-          <SampleTag show={d.isSample} />
-        </>
+        <div className="with-avatar">
+          <Avatar ownerType="dancer" ownerId={d.id} size={34} round />
+          <div>
+            <Link to={`/dancers/${d.id}`} className="link-strong">
+              {fullName(d)}
+            </Link>
+            <SampleTag show={d.isSample} />
+          </div>
+        </div>
       ),
       sortValue: (d) => fullName(d),
     },
@@ -90,6 +95,9 @@ export function DancersPage() {
         subtitle={`${db.dancers.length} dancer${db.dancers.length === 1 ? '' : 's'} in your studio`}
         actions={
           <>
+            <button className="btn btn-ghost" onClick={() => openPrint('dancers', { level })} disabled={!db.dancers.length}>
+              <Printer size={16} /> Print list
+            </button>
             <button className="btn btn-ghost" onClick={() => exportDancers(db)} disabled={!db.dancers.length}>
               <Download size={16} /> Export CSV
             </button>
@@ -233,6 +241,9 @@ export function DancerProfilePage() {
             <button className="btn btn-ghost danger" onClick={del}>
               <Trash2 size={16} /> Delete
             </button>
+            <button className="btn btn-ghost" onClick={() => openPrint('dancer', { id: d.id })}>
+              <Printer size={16} /> Print sheet
+            </button>
             <button className="btn btn-primary" onClick={() => ed.editDancer(d.id)}>
               <Pencil size={16} /> Edit dancer
             </button>
@@ -240,6 +251,7 @@ export function DancerProfilePage() {
         }
       />
       <div className="detail-grid">
+        <div className="stack">
         <Card title="Dancer Information">
           <dl className="dl">
             <dt>First name</dt>
@@ -264,6 +276,8 @@ export function DancerProfilePage() {
           <h4 className="mini-title">Notes</h4>
           <p className="prewrap">{d.notes || <span className="faint">No notes.</span>}</p>
         </Card>
+        <PhotoGallery ownerType="dancer" ownerId={d.id} name={fullName(d)} />
+        </div>
 
         <div className="stack">
           <Card title={`Assigned Costumes (${new Set(costumes.map((c) => c.costume.id)).size})`} icon={<Shirt size={18} />}>

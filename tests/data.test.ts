@@ -291,3 +291,83 @@ describe('upgrade from version 1', () => {
     expect(itemsOf(normalizeDatabase(JSON.parse(JSON.stringify(db))), 'prop').length).toBe(6);
   });
 });
+
+describe('repair & cleaning work orders', () => {
+  const vol = () =>
+    A.saveVolunteer({ firstName: 'Tom', lastName: 'B', email: '', phone: '', preferredContact: '', skills: [], availability: [], notes: '' });
+
+  it('IN PROGRESS opens a work order with volunteer and dates; READY completes it', () => {
+    const v = vol();
+    const id = costume('Tutu');
+    A.setCostumeStatus([id], 'in_progress', 'cleaning', 'Dry clean', { volunteerId: v, scheduledAt: '2026-12-01T10:00', dueDate: '2026-12-05' });
+    let w = getDb().workOrders.find((x) => x.costumeId === id)!;
+    expect(w).toMatchObject({ type: 'cleaning', status: 'open', volunteerId: v, scheduledAt: '2026-12-01T10:00', dueDate: '2026-12-05', description: 'Dry clean' });
+    const log = getDb().costumeNotes.filter((n) => n.workOrderId === w.id);
+    expect(log[0].text).toContain('assigned to Tom B');
+    expect(log[0].volunteerId).toBe(v);
+    A.setCostumeStatus([id], 'ready', null, 'Back from cleaner');
+    w = getDb().workOrders.find((x) => x.id === w.id)!;
+    expect(w.status).toBe('done');
+    expect(w.completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(getDb().costumes.find((c) => c.id === id)!.status).toBe('ready');
+  });
+
+  it('item stays IN PROGRESS until its last open work order is completed', () => {
+    const a = costume('A');
+    const [w1] = A.createWorkOrders([a], { type: 'cleaning', description: '', pieces: 1, volunteerId: null, scheduledAt: '', dueDate: '' });
+    const [w2] = A.createWorkOrders([a], { type: 'repair', description: 'zip', pieces: 1, volunteerId: null, scheduledAt: '', dueDate: '' });
+    expect(getDb().costumes[0].status).toBe('in_progress');
+    A.startWorkOrder(w1, '2026-11-10T09:00');
+    A.completeWorkOrder(w1, { completedAt: '2026-11-10T12:00', note: 'clean', markReady: true });
+    expect(getDb().costumes[0].status).toBe('in_progress');
+    A.completeWorkOrder(w2, { completedAt: '', note: '', markReady: true });
+    expect(getDb().costumes[0].status).toBe('ready');
+    expect(getDb().workOrders.find((w) => w.id === w1)!.startedAt).toBe('2026-11-10T09:00');
+    A.reopenWorkOrder(w2);
+    expect(getDb().costumes[0].status).toBe('in_progress');
+    A.cancelWorkOrder(w2, 'mistake');
+    expect(getDb().costumes[0].status).toBe('ready');
+    expect(getDb().workOrders.find((w) => w.id === w2)!.status).toBe('cancelled');
+  });
+
+  it('assignment changes are logged; deleting a volunteer unassigns open jobs', () => {
+    const v = vol();
+    const a = costume('A');
+    const [w] = A.createWorkOrders([a], { type: 'repair', description: '', pieces: 1, volunteerId: null, scheduledAt: '', dueDate: '' });
+    A.updateWorkOrder(w, { volunteerId: v, dueDate: '2026-12-24' });
+    expect(getDb().costumeNotes.at(-1)!.text).toMatch(/assigned to Tom B; due back/);
+    A.deleteVolunteers([v]);
+    expect(getDb().workOrders[0].volunteerId).toBeNull();
+    expect(getDb().costumeNotes.at(-1)!.text).toContain('was removed from volunteers');
+    expect(() => A.updateWorkOrder(w, { pieces: 0 })).toThrow(/Pieces/);
+  });
+
+  it('deleting an item removes its work orders and photos', () => {
+    const a = costume('A');
+    A.createWorkOrders([a], { type: 'repair', description: '', pieces: 1, volunteerId: null, scheduledAt: '', dueDate: '' });
+    A.addPhotoRecord({ id: 'p1', ownerType: 'item', ownerId: a, caption: 'front', width: 10, height: 10 });
+    A.addPhotoRecord({ id: 'p2', ownerType: 'item', ownerId: a, caption: '', width: 10, height: 10 });
+    expect(getDb().photos.find((p) => p.id === 'p1')!.isPrimary).toBe(true);
+    A.setPrimaryPhoto('p2');
+    expect(getDb().photos.find((p) => p.id === 'p1')!.isPrimary).toBe(false);
+    A.deletePhotoRecord('p2');
+    expect(getDb().photos.find((p) => p.id === 'p1')!.isPrimary).toBe(true);
+    A.deleteCostumes([a]);
+    expect(getDb().workOrders).toHaveLength(0);
+    expect(getDb().photos).toHaveLength(0);
+  });
+
+  it('upgrading older data gives every IN PROGRESS item a work order', () => {
+    const v2 = buildSampleData(emptyDatabase());
+    const raw = JSON.parse(JSON.stringify(v2));
+    raw.meta.schemaVersion = 2;
+    delete raw.workOrders;
+    delete raw.photos;
+    const db = normalizeDatabase(raw);
+    const inProgress = db.costumes.filter((c) => c.status === 'in_progress');
+    expect(inProgress.length).toBeGreaterThan(0);
+    for (const c of inProgress) expect(db.workOrders.some((w) => w.costumeId === c.id && (w.status === 'open' || w.status === 'in_progress'))).toBe(true);
+    expect(db.workOrders.some((w) => w.status === 'done')).toBe(true);
+    expect(db.photos).toEqual([]);
+  });
+});

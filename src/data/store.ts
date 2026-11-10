@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Database } from './types';
-import { buildSampleData, addSamplePropsAndVolunteers } from './sample';
+import { buildSampleData, addSamplePropsAndVolunteers, addSampleWorkOrders } from './sample';
+import { ensureWorkOrders } from './workflow';
 export { newId, nowIso, todayStr } from './ids';
 
 /**
@@ -15,7 +16,7 @@ export { newId, nowIso, todayStr } from './ids';
  */
 
 export const STORAGE_KEY = 'studio-costume-manager/v1';
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export class ValidationError extends Error {}
 
@@ -42,6 +43,8 @@ export function emptyDatabase(): Database {
     castMembers: [],
     assignments: [],
     volunteers: [],
+    workOrders: [],
+    photos: [],
   };
 }
 
@@ -76,6 +79,9 @@ export function normalizeDatabase(raw: unknown): Database {
   if (fromVersion < 2 && db.dancers.some((d) => d.isSample) && !db.volunteers.length && !db.costumes.some((c) => c.kind === 'prop')) {
     addSamplePropsAndVolunteers(db);
   }
+  // Version 3 added repair / cleaning work orders: every IN PROGRESS item gets one.
+  ensureWorkOrders(db);
+  if (fromVersion < 3 && db.dancers.some((d) => d.isSample) && !db.workOrders.some((w) => w.status === 'done')) addSampleWorkOrders(db);
   db.meta.schemaVersion = SCHEMA_VERSION;
   return db;
 }

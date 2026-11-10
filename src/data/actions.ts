@@ -19,7 +19,20 @@ import type {
   ItemKind,
   Volunteer,
   AvailabilitySlot,
+  Photo,
 } from './types';
+import {
+  completeWorkOrderIn,
+  createWorkOrderIn,
+  isOpenOrder,
+  localNow,
+  logNote,
+  noteTypeFor,
+  openOrdersFor,
+  volunteerLabel,
+  workSummary,
+  workTypeLabels,
+} from './workflow';
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -92,6 +105,12 @@ export function pruneOrphans(db: Database) {
   for (const p of db.performances) if (p.showId && !showIds.has(p.showId)) p.showId = null;
 
   db.accessories = db.accessories.filter((a) => costumeIds.has(a.costumeId));
+  if (!Array.isArray(db.workOrders)) db.workOrders = [];
+  if (!Array.isArray(db.photos)) db.photos = [];
+  db.workOrders = db.workOrders.filter((w) => costumeIds.has(w.costumeId));
+  const volunteerIds = new Set(db.volunteers.map((v) => v.id));
+  for (const w of db.workOrders) if (w.volunteerId && !volunteerIds.has(w.volunteerId)) w.volunteerId = null;
+  db.photos = db.photos.filter((p) => (p.ownerType === 'dancer' ? dancerIds.has(p.ownerId) : costumeIds.has(p.ownerId)));
   db.costumeNotes = db.costumeNotes.filter((n) => costumeIds.has(n.costumeId));
   db.casts = db.casts.filter((c) => ownerExists(c.ownerType, c.ownerId));
   const castIds = new Set(db.casts.map((c) => c.id));
@@ -371,29 +390,228 @@ export const progressReasonLabels: Record<ProgressReason, string> = {
   other: 'Other work',
 };
 
-function applyStatus(db: Database, c: Costume, status: CostumeStatus, reason: ProgressReason | null, note: string) {
+export interface WorkExtras {
+  volunteerId?: ID | null;
+  scheduledAt?: string;
+  dueDate?: string;
+}
+
+/**
+ * Change READY / IN PROGRESS. IN PROGRESS opens (or updates) a repair /
+ * cleaning work order; READY completes any open work orders. One log entry
+ * per change, linked to the work order.
+ */
+function applyStatus(db: Database, c: Costume, status: CostumeStatus, reason: ProgressReason | null, note: string, extras: WorkExtras = {}) {
   const t = nowIso();
-  c.status = status;
-  c.progressReason = status === 'in_progress' ? reason ?? 'repair' : null;
-  c.statusUpdatedAt = t;
-  c.updatedAt = t;
   const text = note.trim();
   if (status === 'in_progress') {
-    if (text) c.repairNotes = text;
-    addNote(
-      db,
-      c.id,
-      c.progressReason === 'alteration' ? 'alteration' : 'status',
-      `Marked IN PROGRESS (${progressReasonLabels[c.progressReason!]})${text ? `: ${text}` : '.'}`,
-    );
+    const type = reason ?? 'repair';
+    const existing = openOrdersFor(db, c.id).find((w) => w.type === type);
+    const message = `Marked IN PROGRESS (${progressReasonLabels[type]})${text ? `: ${text}` : '.'}`;
+    if (existing) {
+      if (text) existing.description = text;
+      if (extras.volunteerId !== undefined) existing.volunteerId = extras.volunteerId;
+      if (extras.scheduledAt !== undefined) existing.scheduledAt = extras.scheduledAt;
+      if (extras.dueDate !== undefined) existing.dueDate = extras.dueDate;
+      existing.updatedAt = t;
+      c.status = 'in_progress';
+      c.progressReason = type;
+      c.statusUpdatedAt = t;
+      c.updatedAt = t;
+      if (text) c.repairNotes = text;
+      const extra = workSummary(db, existing);
+      logNote(db, c.id, type === 'alteration' ? 'alteration' : 'status', message + (extra ? ` (${extra})` : ''), { workOrderId: existing.id, volunteerId: existing.volunteerId });
+    } else {
+      const draft = { volunteerId: extras.volunteerId ?? null, scheduledAt: extras.scheduledAt ?? '', dueDate: extras.dueDate ?? '' };
+      const extra = workSummary(db, draft);
+      createWorkOrderIn(db, c, { type, description: text, ...draft }, message + (extra ? ` (${extra})` : ''));
+      if (type !== 'alteration' && type !== 'cleaning') {
+        // Keep the historical "status" label on plain repair entries.
+        const last = db.costumeNotes[db.costumeNotes.length - 1];
+        if (last.costumeId === c.id) last.type = 'status';
+      }
+    }
   } else {
-    addNote(db, c.id, 'status', `Marked READY${text ? `: ${text}` : '.'}`);
+    const open = openOrdersFor(db, c.id);
+    for (const w of open) completeWorkOrderIn(db, w, { note: text, log: false });
+    c.status = 'ready';
+    c.progressReason = null;
+    c.statusUpdatedAt = t;
+    c.updatedAt = t;
+    logNote(db, c.id, 'status', `Marked READY${text ? `: ${text}` : '.'}`, { workOrderId: open.length === 1 ? open[0].id : null, volunteerId: open.length === 1 ? open[0].volunteerId : null });
   }
 }
 
-export function setCostumeStatus(ids: ID[], status: CostumeStatus, reason: ProgressReason | null, note: string) {
+export function setCostumeStatus(ids: ID[], status: CostumeStatus, reason: ProgressReason | null, note: string, extras: WorkExtras = {}) {
   commit((db) => {
-    for (const id of ids) applyStatus(db, findOrThrow(db.costumes, id, 'A selected costume'), status, reason, note);
+    if (extras.volunteerId) findOrThrow(db.volunteers, extras.volunteerId, 'The selected volunteer');
+    for (const id of ids) applyStatus(db, findOrThrow(db.costumes, id, 'A selected item'), status, reason, note, extras);
+  });
+}
+
+/* -------------------------------------------------------- work orders */
+
+export interface WorkOrderInput {
+  type: ProgressReason;
+  description: string;
+  pieces: number;
+  volunteerId: ID | null;
+  scheduledAt: string;
+  dueDate: string;
+}
+
+function checkWorkInput(input: Partial<WorkOrderInput>) {
+  if (input.scheduledAt && Number.isNaN(Date.parse(input.scheduledAt))) throw new ValidationError('Scheduled date/time is not valid.');
+  if (input.dueDate) validDate(input.dueDate, 'Due date');
+  if (input.pieces !== undefined && (!Number.isInteger(Number(input.pieces)) || Number(input.pieces) < 1)) throw new ValidationError('Pieces must be a whole number of 1 or more.');
+}
+
+/** Send one or more costumes / props for repair, cleaning, etc. */
+export function createWorkOrders(costumeIds: ID[], input: WorkOrderInput): ID[] {
+  if (!costumeIds.length) throw new ValidationError('Choose at least one costume or prop.');
+  checkWorkInput(input);
+  return commit((db) => {
+    if (input.volunteerId) findOrThrow(db.volunteers, input.volunteerId, 'The selected volunteer');
+    return costumeIds.map((id) => {
+      const c = findOrThrow(db.costumes, id, 'A selected item');
+      return createWorkOrderIn(db, c, { ...input, pieces: costumeIds.length > 1 ? undefined : input.pieces }).id;
+    });
+  });
+}
+
+/** Edit a work order; every meaningful change is written to the item's log. */
+export function updateWorkOrder(id: ID, patch: Partial<WorkOrderInput>) {
+  checkWorkInput(patch);
+  commit((db) => {
+    const w = findOrThrow(db.workOrders, id, 'This work order');
+    const c = findOrThrow(db.costumes, w.costumeId, 'This item');
+    if (patch.volunteerId) findOrThrow(db.volunteers, patch.volunteerId, 'The selected volunteer');
+    const changes: string[] = [];
+    if (patch.volunteerId !== undefined && patch.volunteerId !== w.volunteerId)
+      changes.push(patch.volunteerId ? `assigned to ${volunteerLabel(db, patch.volunteerId)}` : `unassigned from ${volunteerLabel(db, w.volunteerId)}`);
+    if (patch.scheduledAt !== undefined && patch.scheduledAt !== w.scheduledAt) changes.push(patch.scheduledAt ? `scheduled for ${formatLocal(patch.scheduledAt)}` : 'schedule cleared');
+    if (patch.dueDate !== undefined && patch.dueDate !== w.dueDate) changes.push(patch.dueDate ? `due back ${formatLocal(patch.dueDate)}` : 'due date cleared');
+    if (patch.type !== undefined && patch.type !== w.type) changes.push(`type changed to ${workTypeLabels[patch.type]}`);
+    if (patch.description !== undefined && patch.description.trim() !== w.description) changes.push(`description: ${patch.description.trim() || '—'}`);
+    if (patch.pieces !== undefined && Number(patch.pieces) !== w.pieces) changes.push(`pieces: ${patch.pieces}`);
+    Object.assign(w, patch, { description: patch.description?.trim() ?? w.description, pieces: patch.pieces !== undefined ? Number(patch.pieces) : w.pieces, updatedAt: nowIso() });
+    if (isOpenOrder(w)) {
+      c.progressReason = w.type;
+      if (patch.description !== undefined && w.description) c.repairNotes = w.description;
+    }
+    if (changes.length) logNote(db, c.id, noteTypeFor(w.type), `${workTypeLabels[w.type]} updated — ${changes.join('; ')}.`, { workOrderId: w.id, volunteerId: w.volunteerId });
+  });
+}
+
+export function startWorkOrder(id: ID, startedAt?: string) {
+  commit((db) => {
+    const w = findOrThrow(db.workOrders, id, 'This work order');
+    if (!isOpenOrder(w)) throw new ValidationError('This work order is already closed.');
+    w.status = 'in_progress';
+    w.startedAt = startedAt || localNow();
+    w.updatedAt = nowIso();
+    logNote(db, w.costumeId, noteTypeFor(w.type), `${workTypeLabels[w.type]} started ${formatLocal(w.startedAt)}${w.volunteerId ? ` by ${volunteerLabel(db, w.volunteerId)}` : ''}.`, { workOrderId: w.id, volunteerId: w.volunteerId });
+  });
+}
+
+export function completeWorkOrder(id: ID, opts: { completedAt: string; note: string; markReady: boolean }) {
+  if (opts.completedAt && Number.isNaN(Date.parse(opts.completedAt))) throw new ValidationError('Completed date/time is not valid.');
+  commit((db) => {
+    const w = findOrThrow(db.workOrders, id, 'This work order');
+    if (!isOpenOrder(w)) throw new ValidationError('This work order is already closed.');
+    completeWorkOrderIn(db, w, opts);
+  });
+}
+
+/** Cancel a work order opened by mistake. If nothing else is open, the item goes back to READY. */
+export function cancelWorkOrder(id: ID, reason: string) {
+  commit((db) => {
+    const w = findOrThrow(db.workOrders, id, 'This work order');
+    if (!isOpenOrder(w)) throw new ValidationError('This work order is already closed.');
+    w.status = 'cancelled';
+    w.completedAt = localNow();
+    w.completionNote = reason.trim();
+    w.updatedAt = nowIso();
+    logNote(db, w.costumeId, noteTypeFor(w.type), `${workTypeLabels[w.type]} cancelled${reason.trim() ? `: ${reason.trim()}` : '.'}`, { workOrderId: w.id, volunteerId: w.volunteerId });
+    const c = db.costumes.find((x) => x.id === w.costumeId);
+    if (c && c.status === 'in_progress' && !openOrdersFor(db, c.id).length) {
+      c.status = 'ready';
+      c.progressReason = null;
+      c.statusUpdatedAt = nowIso();
+      c.updatedAt = c.statusUpdatedAt;
+      logNote(db, c.id, 'status', 'Marked READY (no open work left).', { workOrderId: w.id });
+    }
+  });
+}
+
+export function reopenWorkOrder(id: ID) {
+  commit((db) => {
+    const w = findOrThrow(db.workOrders, id, 'This work order');
+    if (isOpenOrder(w)) return;
+    const c = findOrThrow(db.costumes, w.costumeId, 'This item');
+    w.status = 'open';
+    w.completedAt = '';
+    w.updatedAt = nowIso();
+    c.status = 'in_progress';
+    c.progressReason = w.type;
+    c.statusUpdatedAt = w.updatedAt;
+    c.updatedAt = w.updatedAt;
+    logNote(db, c.id, noteTypeFor(w.type), `${workTypeLabels[w.type]} reopened. Marked IN PROGRESS.`, { workOrderId: w.id, volunteerId: w.volunteerId });
+  });
+}
+
+export function addWorkNote(id: ID, text: string) {
+  const t = required(text, 'Note');
+  commit((db) => {
+    const w = findOrThrow(db.workOrders, id, 'This work order');
+    logNote(db, w.costumeId, noteTypeFor(w.type), t, { workOrderId: w.id, volunteerId: w.volunteerId });
+    w.updatedAt = nowIso();
+  });
+}
+
+function formatLocal(dt: string) {
+  const d = new Date(dt);
+  if (Number.isNaN(d.getTime())) return dt;
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', ...(dt.length > 10 ? { hour: 'numeric', minute: '2-digit' } : {}) });
+}
+
+/* ------------------------------------------------------------- photos */
+
+export function addPhotoRecord(input: Pick<Photo, 'id' | 'ownerType' | 'ownerId' | 'caption' | 'width' | 'height'>) {
+  commit((db) => {
+    if (input.ownerType === 'dancer') findOrThrow(db.dancers, input.ownerId, 'This dancer');
+    else findOrThrow(db.costumes, input.ownerId, 'This item');
+    const first = !db.photos.some((p) => p.ownerType === input.ownerType && p.ownerId === input.ownerId);
+    const t = nowIso();
+    db.photos.push({ ...input, caption: input.caption.trim(), isPrimary: first, createdAt: t, updatedAt: t });
+    if (input.ownerType === 'item') addNote(db, input.ownerId, 'general', `Photo added${input.caption.trim() ? `: ${input.caption.trim()}` : '.'}`);
+  });
+}
+
+export function setPrimaryPhoto(id: ID) {
+  commit((db) => {
+    const p = findOrThrow(db.photos, id, 'This photo');
+    for (const x of db.photos) if (x.ownerType === p.ownerType && x.ownerId === p.ownerId) x.isPrimary = x.id === id;
+  });
+}
+
+export function setPhotoCaption(id: ID, caption: string) {
+  commit((db) => {
+    const p = findOrThrow(db.photos, id, 'This photo');
+    p.caption = caption.trim();
+    p.updatedAt = nowIso();
+  });
+}
+
+export function deletePhotoRecord(id: ID) {
+  commit((db) => {
+    const p = findOrThrow(db.photos, id, 'This photo');
+    db.photos = db.photos.filter((x) => x.id !== id);
+    if (p.isPrimary) {
+      const next = db.photos.find((x) => x.ownerType === p.ownerType && x.ownerId === p.ownerId);
+      if (next) next.isPrimary = true;
+    }
+    if (p.ownerType === 'item') addNote(db, p.ownerId, 'general', 'Photo removed.');
   });
 }
 
@@ -800,7 +1018,13 @@ export function saveVolunteer(input: VolunteerInput, id?: ID): ID {
 export function deleteVolunteers(ids: ID[]) {
   const set = new Set(ids);
   commit((db) => {
+    for (const w of db.workOrders) {
+      if (w.volunteerId && set.has(w.volunteerId) && isOpenOrder(w)) {
+        logNote(db, w.costumeId, noteTypeFor(w.type), `${workTypeLabels[w.type]} unassigned: ${volunteerLabel(db, w.volunteerId)} was removed from volunteers.`, { workOrderId: w.id });
+      }
+    }
     db.volunteers = db.volunteers.filter((v) => !set.has(v.id));
+    pruneOrphans(db);
   });
 }
 

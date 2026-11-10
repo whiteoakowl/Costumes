@@ -5,6 +5,7 @@ import { countSampleRecords, eraseAllData, loadSampleData, removeSampleData, res
 import { Card, Field, PageHeader } from '../components/ui';
 import { useConfirm, useRun, useToast } from '../components/feedback';
 import { CategoryManager } from './Costumes';
+import { clearImages, importImages } from '../lib/images';
 import { exportAllPerformanceAssignments, exportBackup, exportCostumeInventory, exportDancers, exportVolunteers } from '../lib/export';
 import { sortedCategories } from '../data/selectors';
 
@@ -62,6 +63,7 @@ export function SettingsPage() {
   const [propPrefix, setPropPrefix] = useState(db.settings.propIdPrefix);
   const [catsOpen, setCatsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [backingUp, setBackingUp] = useState(false);
   const samples = countSampleRecords(db);
 
   const onRestore = async (file: File) => {
@@ -73,7 +75,16 @@ export function SettingsPage() {
       return;
     }
     if (await confirm({ title: 'Restore from backup?', message: 'This replaces ALL current data with the contents of the backup file. Consider downloading a backup of the current data first.', confirmLabel: 'Restore backup', danger: true }))
-      run(() => (restoreBackup(parsed), true), 'Backup restored.');
+    {
+      if (!run(() => (restoreBackup(parsed), true))) return;
+      try {
+        await clearImages();
+        const n = await importImages((parsed as { images?: Record<string, { full: string; thumb: string }> }).images);
+        toast.success(`Backup restored${n ? ` with ${n} photo${n === 1 ? '' : 's'}` : ''}.`);
+      } catch {
+        toast.error('Data restored, but the photos could not be restored in this browser.');
+      }
+    }
   };
 
   return (
@@ -154,10 +165,24 @@ export function SettingsPage() {
 
         <Card title="Backup & Restore" icon={<DbIcon size={18} />}>
           <p className="small">
-            Your data is saved automatically in this browser on this device. Download a backup regularly, and use it to move your data to another computer.
+            Your data and photos are saved automatically in this browser on this device. Download a backup regularly (it includes photos), and use it to move your data to another computer.
           </p>
           <div className="btn-col">
-            <button className="btn btn-primary" onClick={() => exportBackup(db)}>
+            <button
+              className="btn btn-primary"
+              disabled={backingUp}
+              onClick={async () => {
+                setBackingUp(true);
+                try {
+                  const n = await exportBackup(db);
+                  toast.success(`Backup downloaded${n ? ` (includes ${n} photo${n === 1 ? '' : 's'})` : ''}.`);
+                } catch {
+                  toast.error('The backup could not be created.');
+                } finally {
+                  setBackingUp(false);
+                }
+              }}
+            >
               <Download size={16} /> Download full backup (.json)
             </button>
             <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>
@@ -209,7 +234,7 @@ export function SettingsPage() {
             className="btn btn-danger"
             onClick={async () => {
               if (await confirm({ title: 'Erase ALL data?', message: 'This cannot be undone. Download a backup first if you might need this data again.', confirmLabel: 'Erase everything', danger: true }))
-                run(() => eraseAllData(), 'All data erased.');
+                if (run(() => (eraseAllData(), true), 'All data erased.')) clearImages().catch(() => undefined);
             }}
           >
             <Trash2 size={16} /> Erase all data

@@ -1,5 +1,6 @@
 import type { Costume, Database, ID, OwnerType, ProgressReason } from './types';
 import { newId, nowIso } from './ids';
+import { createWorkOrderIn, completeWorkOrderIn, ensureWorkOrders } from './workflow';
 
 /**
  * Sample data shown on first launch. Every record is flagged `isSample: true`
@@ -183,7 +184,54 @@ export function buildSampleData(db: Database): Database {
   // Harper in the matinee intentionally has no costume yet, to demonstrate the warnings.
 
   addSamplePropsAndVolunteers(db);
+  addSampleWorkOrders(db);
   db.meta.sampleLoaded = true;
+  return db;
+}
+
+/** Sample repair / cleaning history: open orders for in-progress samples, one assigned cleaning, one completed job. */
+export function addSampleWorkOrders(db: Database): Database {
+  if (!Array.isArray(db.workOrders)) db.workOrders = [];
+  ensureWorkOrders(db);
+  const item = (name: string) => db.costumes.find((c) => c.isSample && c.name === name);
+  const vol = (first: string) => db.volunteers.find((v) => v.isSample && v.firstName === first)?.id ?? null;
+  const inDays = (days: number, time: string) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}${time ? `T${time}` : ''}`;
+  };
+  const hipHop = item('Hip Hop Crew Set');
+  const cleaning = hipHop && db.workOrders.find((w) => w.costumeId === hipHop.id && w.status !== 'done');
+  if (cleaning) {
+    cleaning.volunteerId = vol('Tom');
+    cleaning.scheduledAt = inDays(2, '10:00');
+    cleaning.dueDate = inDays(9, '');
+  }
+  const mouse = item('Mouse Costume');
+  const mouseOrder = mouse && db.workOrders.find((w) => w.costumeId === mouse.id && w.status !== 'done');
+  if (mouseOrder) {
+    mouseOrder.volunteerId = vol('Dana');
+    mouseOrder.status = 'in_progress';
+    mouseOrder.startedAt = inDays(-1, '18:30');
+    mouseOrder.dueDate = inDays(20, '');
+  }
+  const snow = item('Snowflake Tutu');
+  if (snow) {
+    const w = createWorkOrderIn(db, snow, { type: 'cleaning', description: 'Spot clean bodices after fall recital', volunteerId: vol('Priya'), scheduledAt: inDays(-8, '09:00') }, '');
+    w.createdAt = new Date(Date.now() - 9 * 864e5).toISOString();
+    w.startedAt = inDays(-8, '09:15');
+    completeWorkOrderIn(db, w, { completedAt: inDays(-6, '16:00'), note: 'All 6 cleaned and steamed', markReady: true, log: false });
+    snow.repairNotes = '';
+    db.costumeNotes.push(
+      { id: newId(), createdAt: w.createdAt, updatedAt: w.createdAt, isSample: true, costumeId: snow.id, type: 'cleaning', text: 'Cleaning requested: Spot clean bodices after fall recital (assigned to Priya Shah). Marked IN PROGRESS.', workOrderId: w.id, volunteerId: w.volunteerId },
+      { id: newId(), createdAt: new Date(Date.now() - 6 * 864e5).toISOString(), updatedAt: w.createdAt, isSample: true, costumeId: snow.id, type: 'cleaning', text: 'Cleaning completed by Priya Shah: All 6 cleaned and steamed.', workOrderId: w.id, volunteerId: w.volunteerId },
+    );
+  }
+  for (const w of db.workOrders) {
+    const c = db.costumes.find((x) => x.id === w.costumeId);
+    if (c?.isSample) w.isSample = true;
+  }
   return db;
 }
 

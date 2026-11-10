@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, CheckCircle2, Copy, Download, FolderInput, History, MapPin, Pencil, Plus, Tags, Trash2, Wrench } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Copy, Download, FolderInput, History, MapPin, Pencil, Plus, Tags, Trash2, Wrench , Printer, Sparkles} from 'lucide-react';
 import { useDb } from '../data/store';
 import { addCostumeNote, deleteCategory, deleteCostumes, duplicateCostume, moveCategory, moveCostumes, saveCategory } from '../data/actions';
-import { accessoriesFor, byId, costumeUsage, formatDate, formatDateTime, itemsOf, kindOf, sortedCategories } from '../data/selectors';
+import { accessoriesFor, byId, costumeUsage, formatDate, formatDateTime, itemsOf, kindOf, sortedCategories, volunteerName } from '../data/selectors';
 import { Badge, BulkBar, Card, DataTable, EmptyState, Field, PageHeader, SampleTag, SearchInput, SearchSelect, StatusBadge, Tabs, type Column } from '../components/ui';
 import { useConfirm, useRun } from '../components/feedback';
 import { useEditors } from '../components/editors';
@@ -13,6 +13,10 @@ import { Modal } from '../components/Modal';
 import { exportCostumeInventory } from '../lib/export';
 import type { Costume, CostumeCategory, ID, ItemKind, NoteType } from '../data/types';
 import { itemLabels } from '../lib/labels';
+import { isOpenOrder, noteTypeLabels } from '../data/workflow';
+import { WorkOrderDialog, WorkOrderTable } from '../components/work';
+import { Avatar, PhotoGallery } from '../components/photos';
+import { openPrint } from './Print';
 
 type View = 'all' | 'category' | 'size' | 'location' | 'ready' | 'in_progress';
 
@@ -41,6 +45,7 @@ function InventoryPage({ kind }: { kind: ItemKind }) {
   const [moving, setMoving] = useState(false);
   const [recat, setRecat] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
+  const [sendIds, setSendIds] = useState<ID[] | null>(null);
 
   const setParam = (k: string, v: string) => {
     const next = new URLSearchParams(params);
@@ -74,13 +79,16 @@ function InventoryPage({ kind }: { kind: ItemKind }) {
       key: 'name',
       header: L.One,
       render: (c) => (
-        <>
-          <Link to={`${L.base}/${c.id}`} className="link-strong">
-            {c.name}
-          </Link>
-          <SampleTag show={c.isSample} />
-          {c.description && <div className="small faint truncate">{c.description}</div>}
-        </>
+        <div className="with-avatar">
+          <Avatar ownerType="item" ownerId={c.id} size={40} fallback={<L.Icon size={18} />} />
+          <div>
+            <Link to={`${L.base}/${c.id}`} className="link-strong">
+              {c.name}
+            </Link>
+            <SampleTag show={c.isSample} />
+            {c.description && <div className="small faint truncate">{c.description}</div>}
+          </div>
+        </div>
       ),
       sortValue: (c) => c.name,
     },
@@ -199,6 +207,9 @@ function InventoryPage({ kind }: { kind: ItemKind }) {
             <button className="btn btn-ghost" onClick={() => setCatsOpen(true)}>
               <Tags size={16} /> Categories
             </button>
+            <button className="btn btn-ghost" onClick={() => openPrint('costumes', { kind, category: categoryFilter === 'none' ? '' : categoryFilter, location: locationFilter === 'none' ? '' : locationFilter, status: view === 'ready' || view === 'in_progress' ? view : '', group: view === 'location' ? 'location' : 'category' })} disabled={!items.length}>
+              <Printer size={16} /> Print
+            </button>
             <button className="btn btn-ghost" onClick={() => exportCostumeInventory(db, undefined, kind)} disabled={!items.length}>
               <Download size={16} /> Export CSV
             </button>
@@ -270,6 +281,9 @@ function InventoryPage({ kind }: { kind: ItemKind }) {
           <button className="btn btn-ghost btn-sm" onClick={() => ed.changeStatus(ids, 'in_progress')}>
             <Wrench size={14} /> Mark IN PROGRESS
           </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setSendIds(ids)}>
+            <Sparkles size={14} /> Send for cleaning / repair
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMoving(true)}>
             <MapPin size={14} /> Move location
           </button>
@@ -305,6 +319,7 @@ function InventoryPage({ kind }: { kind: ItemKind }) {
       <MoveCostumesDialog open={moving} onClose={() => setMoving(false)} costumeIds={ids} onDone={() => setSelected(new Set())} />
       <SetCategoryDialog open={recat} onClose={() => setRecat(false)} costumeIds={ids} onDone={() => setSelected(new Set())} />
       <CategoryManager open={catsOpen} onClose={() => setCatsOpen(false)} />
+      <WorkOrderDialog open={!!sendIds} onClose={() => (setSendIds(null), setSelected(new Set()))} costumeIds={sendIds ?? []} />
     </>
   );
 }
@@ -408,12 +423,13 @@ const NOTE_TYPES: { value: NoteType; label: string }[] = [
   { value: 'general', label: 'General note' },
   { value: 'change', label: 'Costume change' },
   { value: 'repair', label: 'Repair' },
+  { value: 'cleaning', label: 'Cleaning' },
   { value: 'alteration', label: 'Alteration' },
   { value: 'accessory', label: 'Accessory change' },
   { value: 'sizing', label: 'Sizing update' },
   { value: 'other', label: 'Other' },
 ];
-const NOTE_LABEL: Record<NoteType, string> = { general: 'Note', change: 'Change', repair: 'Repair', alteration: 'Alteration', accessory: 'Accessory', sizing: 'Sizing', status: 'Status', location: 'Location', other: 'Other' };
+const NOTE_LABEL = noteTypeLabels;
 
 export function CostumeDetailPage() {
   const { id } = useParams();
@@ -425,6 +441,7 @@ export function CostumeDetailPage() {
   const locations = useLocationOptions();
   const [noteType, setNoteType] = useState<NoteType>('general');
   const [noteText, setNoteText] = useState('');
+  const [sending, setSending] = useState(false);
   const c = db.costumes.find((x) => x.id === id);
   const L = itemLabels[c ? kindOf(c) : 'costume'];
 
@@ -439,6 +456,7 @@ export function CostumeDetailPage() {
   const acc = accessoriesFor(db, c.id);
   const notes = db.costumeNotes.filter((n) => n.costumeId === c.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const usage = costumeUsage(db, c.id);
+  const work = db.workOrders.filter((w) => w.costumeId === c.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const cat = c.categoryId ? db.categories.find((x) => x.id === c.categoryId) : null;
 
   const addNote = () => {
@@ -475,6 +493,9 @@ export function CostumeDetailPage() {
             >
               <Copy size={16} /> Duplicate
             </button>
+            <button className="btn btn-ghost" onClick={() => openPrint('item', { id: c.id })}>
+              <Printer size={16} /> Print
+            </button>
             <button className="btn btn-primary" onClick={() => ed.editCostume(c.id)}>
               <Pencil size={16} /> Edit {L.one}
             </button>
@@ -505,6 +526,8 @@ export function CostumeDetailPage() {
               </div>
             </div>
           </Card>
+
+          <PhotoGallery ownerType="item" ownerId={c.id} name={c.name} />
 
           <Card title={`${L.One} Details`}>
             <dl className="dl">
@@ -576,6 +599,24 @@ export function CostumeDetailPage() {
           </Card>
         </div>
 
+        <div className="stack">
+        <Card
+          title="Repair & Cleaning"
+          icon={<Wrench size={18} />}
+          actions={
+            <button className="btn btn-primary btn-sm" onClick={() => setSending(true)}>
+              <Plus size={15} /> Send for repair / cleaning
+            </button>
+          }
+        >
+          <WorkOrderTable orders={work.filter((w) => isOpenOrder(w))} showItem={false} empty={`Nothing open. Use “Send for repair / cleaning” to log work and assign a volunteer.`} />
+          {work.some((w) => !isOpenOrder(w)) && (
+            <details className="work-history">
+              <summary>Past work ({work.filter((w) => !isOpenOrder(w)).length})</summary>
+              <WorkOrderTable orders={work.filter((w) => !isOpenOrder(w))} showItem={false} />
+            </details>
+          )}
+        </Card>
         <Card title="Notes & History Log" icon={<History size={18} />}>
           <div className="note-form">
             <select className="input input-auto" value={noteType} onChange={(e) => setNoteType(e.target.value as NoteType)} aria-label="Note type">
@@ -600,6 +641,11 @@ export function CostumeDetailPage() {
                   <div className="log-meta">
                     <span className={`log-type t-${n.type}`}>{NOTE_LABEL[n.type]}</span>
                     {formatDateTime(n.createdAt)}
+                    {n.volunteerId && (
+                      <Link to={`/volunteers/${n.volunteerId}`} className="small">
+                        {volunteerName(db.volunteers.find((v) => v.id === n.volunteerId) ?? { firstName: 'Removed volunteer', lastName: '' })}
+                      </Link>
+                    )}
                   </div>
                   <div className="prewrap">{n.text}</div>
                 </li>
@@ -607,7 +653,9 @@ export function CostumeDetailPage() {
             </ul>
           )}
         </Card>
+        </div>
       </div>
+      <WorkOrderDialog open={sending} onClose={() => setSending(false)} costumeIds={[c.id]} />
     </>
   );
 }
