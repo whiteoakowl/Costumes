@@ -33,6 +33,7 @@ import {
   workSummary,
   workTypeLabels,
 } from './workflow';
+import { ensureOwnerAccount } from './studio';
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -111,6 +112,19 @@ export function pruneOrphans(db: Database) {
   const volunteerIds = new Set(db.volunteers.map((v) => v.id));
   for (const w of db.workOrders) if (w.volunteerId && !volunteerIds.has(w.volunteerId)) w.volunteerId = null;
   db.photos = db.photos.filter((p) => (p.ownerType === 'dancer' ? dancerIds.has(p.ownerId) : costumeIds.has(p.ownerId)));
+  // Studio management: enrollments follow their dancer & class; attendance history is kept.
+  if (Array.isArray(db.enrollments)) {
+    const classIds = new Set(db.classes.map((c) => c.id));
+    const familyIds = new Set(db.families.map((f) => f.id));
+    db.enrollments = db.enrollments.filter((e) => dancerIds.has(e.dancerId) && classIds.has(e.classId));
+    for (const d of db.dancers) if (d.familyId && !familyIds.has(d.familyId)) d.familyId = null;
+    for (const a of db.accounts) {
+      if (a.dancerId && !dancerIds.has(a.dancerId)) {
+        a.dancerId = null;
+        a.active = false;
+      }
+    }
+  }
   db.costumeNotes = db.costumeNotes.filter((n) => costumeIds.has(n.costumeId));
   db.casts = db.casts.filter((c) => ownerExists(c.ownerType, c.ownerId));
   const castIds = new Set(db.casts.map((c) => c.id));
@@ -143,8 +157,12 @@ export function saveDancer(input: DancerInput, id?: ID): ID {
     shoeSize: input.shoeSize.trim(),
     level: input.level.trim(),
     notes: input.notes.trim(),
+    enrollmentDate: input.enrollmentDate ? validDate(input.enrollmentDate, 'Enrollment date') : input.enrollmentDate,
+    medicalNotes: input.medicalNotes?.trim() ?? input.medicalNotes,
+    allergies: input.allergies?.trim() ?? input.allergies,
   };
   return commit((db) => {
+    if (clean.familyId) findOrThrow(db.families, clean.familyId, 'The selected family');
     if (id) {
       const d = findOrThrow(db.dancers, id, 'This dancer');
       Object.assign(d, clean, { updatedAt: nowIso() });
@@ -1065,6 +1083,7 @@ export function removeSampleData() {
       if (Array.isArray(v)) (db as unknown as Record<string, unknown>)[key] = (v as { isSample?: boolean }[]).filter((r) => !r.isSample);
     }
     pruneOrphans(db);
+    ensureOwnerAccount(db);
   });
 }
 
@@ -1077,6 +1096,9 @@ export function loadSampleData() {
 
 export function eraseAllData() {
   const db = emptyDatabase();
+  const owner = getDb().accounts?.find((a) => a.role === 'owner' && a.active && !a.isSample);
+  if (owner) db.accounts.push({ ...owner });
+  else ensureOwnerAccount(db);
   db.meta.sampleLoaded = true; // don't re-add samples on next launch
   db.settings = { ...getDb().settings };
   replaceDb(db);

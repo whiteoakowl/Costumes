@@ -48,7 +48,16 @@ export interface Dancer extends Base {
   level: string;
   pointe: boolean;
   notes: string;
+  /* Studio-management fields (added in schema v4; optional on older records). */
+  familyId?: ID | null;
+  enrollmentStatus?: EnrollmentStatus;
+  enrollmentDate?: string; // YYYY-MM-DD
+  /** Restricted: only roles with the "medical.view" permission can see these. */
+  medicalNotes?: string;
+  allergies?: string;
 }
+
+export type EnrollmentStatus = 'active' | 'prospective' | 'inactive' | 'withdrawn';
 
 export interface CostumeCategory extends Base {
   name: string;
@@ -227,6 +236,12 @@ export interface Settings {
   costumeIdPrefix: string;
   propIdPrefix: string;
   skills: string[];
+  danceStyles: string[];
+  studioPhone: string;
+  studioEmail: string;
+  studioAddress: string;
+  /** Payroll period length used for summaries. */
+  payPeriod: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
 }
 
 export interface Meta {
@@ -234,6 +249,219 @@ export interface Meta {
   nextCostumeNumber: number;
   nextPropNumber: number;
   sampleLoaded: boolean;
+}
+
+/* =================================================== studio management (v4) */
+
+/** Account roles. Each role opens one portal; permissions can be customised per account. */
+export type Role = 'owner' | 'office_admin' | 'office_assistant' | 'teacher' | 'assistant_teacher' | 'parent' | 'dancer' | 'performance_staff';
+
+/**
+ * A person's login to the platform. In browser-only mode this is used to
+ * preview each portal ("viewing as"); it is not a security boundary.
+ */
+export interface UserAccount extends Base {
+  displayName: string;
+  email: string;
+  role: Role;
+  active: boolean;
+  staffId: ID | null; // teachers, assistants, office & performance staff
+  guardianId: ID | null; // parents
+  dancerId: ID | null; // dancer logins
+  /** Custom permission list; null means "use the role's defaults". */
+  permissions: string[] | null;
+  lastActiveAt: string;
+  notes: string;
+}
+
+export interface Family extends Base {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  status: 'active' | 'inactive';
+  notes: string;
+}
+
+export interface Guardian extends Base {
+  familyId: ID;
+  firstName: string;
+  lastName: string;
+  relationship: string; // Mother, Father, Guardian…
+  email: string;
+  phone: string;
+  isPrimary: boolean;
+  emailConsent: boolean;
+  smsConsent: boolean;
+}
+
+export interface EmergencyContact extends Base {
+  familyId: ID;
+  name: string;
+  relationship: string;
+  phone: string;
+  notes: string;
+}
+
+export type StaffPosition = 'teacher' | 'assistant' | 'substitute' | 'office' | 'performance' | 'other';
+
+export interface StaffMember extends Base {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  emergencyContact: string;
+  hireDate: string;
+  position: StaffPosition;
+  title: string;
+  styles: string[];
+  qualifications: string;
+  payType: 'hourly' | 'salary';
+  payRate: number; // per hour, or per year for salary
+  status: 'active' | 'inactive';
+  notes: string;
+}
+
+export interface SchoolYear extends Base {
+  name: string; // 2026–2027
+  startDate: string;
+  endDate: string;
+  registrationStart: string;
+  registrationEnd: string;
+  status: 'planning' | 'current' | 'archived';
+  tuitionNotes: string;
+  recitalInfo: string;
+  notes: string;
+}
+
+export interface Classroom extends Base {
+  name: string;
+  capacity: number;
+  notes: string;
+}
+
+export interface DanceClass extends Base {
+  schoolYearId: ID;
+  name: string;
+  style: string;
+  level: string;
+  ageMin: number | null;
+  ageMax: number | null;
+  dayOfWeek: number; // 0 = Sunday … 6 = Saturday
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM
+  classroomId: ID | null;
+  teacherId: ID | null; // StaffMember
+  assistantId: ID | null; // StaffMember
+  maxEnrollment: number;
+  description: string;
+  notes: string;
+  tuition: number; // per month
+  /** Optional sub-range of the school year; blank = whole year. */
+  startDate: string;
+  endDate: string;
+}
+
+export interface Enrollment extends Base {
+  classId: ID;
+  dancerId: ID;
+  status: 'enrolled' | 'waitlist' | 'dropped';
+  enrolledOn: string;
+  droppedOn: string;
+}
+
+export type CalendarEntryType = 'holiday' | 'closure' | 'weather' | 'rehearsal' | 'master_class' | 'workshop' | 'guest' | 'competition_rehearsal' | 'important' | 'event';
+
+/** Non-class calendar entries: closures (which cancel classes), rehearsals, workshops, important dates… */
+export interface StudioEvent extends Base {
+  title: string;
+  type: CalendarEntryType;
+  startDate: string;
+  endDate: string; // inclusive; = startDate for one day
+  allDay: boolean;
+  startTime: string;
+  endTime: string;
+  classroomId: ID | null;
+  location: string;
+  cancelsClasses: boolean;
+  schoolYearId: ID | null;
+  notes: string;
+}
+
+/** A change to one occurrence of a weekly class: cancelled, or moved / substituted. */
+export interface SessionChange extends Base {
+  classId: ID;
+  date: string; // the regularly scheduled date being changed
+  cancelled: boolean;
+  newDate: string; // '' = same date
+  newStartTime: string;
+  newEndTime: string;
+  newClassroomId: ID | null;
+  substituteId: ID | null;
+  reason: string;
+}
+
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused' | 'makeup';
+
+export interface AttendanceRecord extends Base {
+  classId: ID;
+  date: string; // the class's scheduled date
+  dancerId: ID;
+  status: AttendanceStatus;
+  note: string;
+  takenBy: string; // display name
+}
+
+export type HoursKind = 'class' | 'additional' | 'substitute' | 'rehearsal' | 'private' | 'other';
+
+export interface TimeEntry extends Base {
+  staffId: ID;
+  date: string;
+  kind: HoursKind;
+  classId: ID | null;
+  scheduledHours: number;
+  hours: number;
+  rate: number; // hourly rate at the time
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedBy: string;
+  reviewedBy: string;
+  reviewedAt: string;
+  reviewNote: string;
+  /** Every change after submission, never overwritten. */
+  history: { at: string; by: string; change: string }[];
+}
+
+/** In-app notices for teachers and families (schedule changes, cancellations…). */
+export interface Notice extends Base {
+  title: string;
+  body: string;
+  kind: 'schedule' | 'cancellation' | 'announcement' | 'reminder';
+  staffIds: ID[];
+  familyIds: ID[];
+  classId: ID | null;
+  author: string;
+  readBy: ID[]; // account ids
+}
+
+/** Announcements written by staff, shown in portals. */
+export interface Announcement extends Base {
+  title: string;
+  body: string;
+  audience: 'everyone' | 'staff' | 'families' | 'class';
+  classId: ID | null;
+  author: string;
+  pinned: boolean;
+}
+
+/** Studio-wide activity feed / audit trail. */
+export interface ActivityEntry extends Base {
+  actor: string;
+  action: string;
+  detail: string;
+  link: string;
 }
 
 export interface Database {
@@ -253,6 +481,22 @@ export interface Database {
   volunteers: Volunteer[];
   workOrders: WorkOrder[];
   photos: Photo[];
+  accounts: UserAccount[];
+  families: Family[];
+  guardians: Guardian[];
+  emergencyContacts: EmergencyContact[];
+  staff: StaffMember[];
+  schoolYears: SchoolYear[];
+  classrooms: Classroom[];
+  classes: DanceClass[];
+  enrollments: Enrollment[];
+  studioEvents: StudioEvent[];
+  sessionChanges: SessionChange[];
+  attendance: AttendanceRecord[];
+  timeEntries: TimeEntry[];
+  notices: Notice[];
+  announcements: Announcement[];
+  activity: ActivityEntry[];
 }
 
 export type TableName = Exclude<keyof Database, 'meta' | 'settings'>;

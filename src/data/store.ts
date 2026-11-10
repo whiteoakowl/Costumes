@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import type { Database } from './types';
 import { buildSampleData, addSamplePropsAndVolunteers, addSampleWorkOrders } from './sample';
+import { addSampleStudio } from './sampleStudio';
+import { ensureOwnerAccount } from './studio';
 import { ensureWorkOrders } from './workflow';
 export { newId, nowIso, todayStr } from './ids';
 
@@ -16,7 +18,7 @@ export { newId, nowIso, todayStr } from './ids';
  */
 
 export const STORAGE_KEY = 'studio-costume-manager/v1';
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export class ValidationError extends Error {}
 
@@ -29,6 +31,11 @@ export function emptyDatabase(): Database {
       sizes: ['Child XS', 'Child S', 'Child M', 'Child L', 'Child XL', 'Adult XS', 'Adult S', 'Adult M', 'Adult L', 'Adult XL'],
       costumeIdPrefix: 'COS',
       propIdPrefix: 'PROP',
+      danceStyles: ['Ballet', 'Pointe', 'Jazz', 'Tap', 'Contemporary', 'Lyrical', 'Hip Hop', 'Acro', 'Musical Theatre', 'Creative Movement'],
+      studioPhone: '',
+      studioEmail: '',
+      studioAddress: '',
+      payPeriod: 'biweekly',
       skills: ['Sewing', 'Alterations', 'Hair & makeup', 'Backstage / stage crew', 'Quick changes / dressing', 'Set building', 'Ushering', 'Ticketing', 'Photography', 'Chaperone'],
     },
     dancers: [],
@@ -45,6 +52,22 @@ export function emptyDatabase(): Database {
     volunteers: [],
     workOrders: [],
     photos: [],
+    accounts: [],
+    families: [],
+    guardians: [],
+    emergencyContacts: [],
+    staff: [],
+    schoolYears: [],
+    classrooms: [],
+    classes: [],
+    enrollments: [],
+    studioEvents: [],
+    sessionChanges: [],
+    attendance: [],
+    timeEntries: [],
+    notices: [],
+    announcements: [],
+    activity: [],
   };
 }
 
@@ -82,6 +105,12 @@ export function normalizeDatabase(raw: unknown): Database {
   // Version 3 added repair / cleaning work orders: every IN PROGRESS item gets one.
   ensureWorkOrders(db);
   if (fromVersion < 3 && db.dancers.some((d) => d.isSample) && !db.workOrders.some((w) => w.status === 'done')) addSampleWorkOrders(db);
+  // Version 4 added studio management. Existing studios get an owner account;
+  // studios with sample data also get sample families, staff and classes.
+  if (fromVersion < 4) {
+    if (db.dancers.some((d) => d.isSample) && !db.classes.length) addSampleStudio(db);
+    ensureOwnerAccount(db);
+  }
   db.meta.schemaVersion = SCHEMA_VERSION;
   return db;
 }

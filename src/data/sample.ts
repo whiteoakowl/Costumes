@@ -1,5 +1,6 @@
 import type { Costume, Database, ID, OwnerType, ProgressReason } from './types';
 import { newId, nowIso } from './ids';
+import { addSampleStudio } from './sampleStudio';
 import { createWorkOrderIn, completeWorkOrderIn, ensureWorkOrders } from './workflow';
 
 /**
@@ -185,6 +186,7 @@ export function buildSampleData(db: Database): Database {
 
   addSamplePropsAndVolunteers(db);
   addSampleWorkOrders(db);
+  addSampleStudio(db);
   db.meta.sampleLoaded = true;
   return db;
 }

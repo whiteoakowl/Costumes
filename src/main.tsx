@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { HashRouter, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useViewer } from './lib/session';
+import { portalHome } from './lib/nav';
 import '@fontsource/cormorant-garamond/500.css';
 import '@fontsource/cormorant-garamond/600.css';
 import '@fontsource/dm-sans/400.css';
@@ -20,6 +22,17 @@ import { StorageDetailPage, StoragePage } from './pages/Storage';
 import { SettingsPage } from './pages/Settings';
 import { EmptyState } from './components/ui';
 import { RepairsPage } from './pages/Repairs';
+import { AccountsPage } from './pages/Accounts';
+import { FamiliesPage, FamilyDetailPage } from './pages/Families';
+import { StaffDetailPage, StaffPage } from './pages/Staff';
+import { SchoolYearsPage } from './pages/SchoolYears';
+import { ClassDetailPage, ClassesPage } from './pages/Classes';
+import { CalendarPage } from './pages/Calendar';
+import { AttendancePage } from './pages/Attendance';
+import { HoursPage, MyHoursPage } from './pages/Hours';
+import { TeacherClassesPage, TeacherDashboard, TeacherSchedulePage } from './pages/TeacherPortal';
+import { FamilyAccountPage, FamilyAttendancePage, FamilyCostumesPage, FamilyDancersPage, FamilyDashboard, FamilySchedulePage } from './pages/ParentPortal';
+import { PerformanceDashboard } from './pages/PerformancePortal';
 import { ReportsPage } from './pages/Reports';
 import { PrintPage } from './pages/Print';
 import { collectGarbage } from './lib/images';
@@ -42,12 +55,40 @@ function App() {
   );
 }
 
+/** "/" is the owner/office dashboard; other portals go to their own home. */
+function Home() {
+  const v = useViewer();
+  return v.isStaffAdmin ? <Dashboard /> : <Navigate to={portalHome[v.portal]} replace />;
+}
+
 function MainApp() {
   return (
           <Layout>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Home />} />
               <Route path="/repairs" element={<RepairsPage />} />
+              <Route path="/accounts" element={<AccountsPage />} />
+              <Route path="/families" element={<FamiliesPage />} />
+              <Route path="/families/:id" element={<FamilyDetailPage />} />
+              <Route path="/staff" element={<StaffPage />} />
+              <Route path="/staff/:id" element={<StaffDetailPage />} />
+              <Route path="/school-years" element={<SchoolYearsPage />} />
+              <Route path="/classes" element={<ClassesPage />} />
+              <Route path="/classes/:id" element={<ClassDetailPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/hours" element={<HoursPage />} />
+              <Route path="/teacher" element={<TeacherDashboard />} />
+              <Route path="/teacher/schedule" element={<TeacherSchedulePage />} />
+              <Route path="/teacher/classes" element={<TeacherClassesPage />} />
+              <Route path="/teacher/hours" element={<MyHoursPage />} />
+              <Route path="/family" element={<FamilyDashboard />} />
+              <Route path="/family/dancers" element={<FamilyDancersPage />} />
+              <Route path="/family/schedule" element={<FamilySchedulePage />} />
+              <Route path="/family/attendance" element={<FamilyAttendancePage />} />
+              <Route path="/family/costumes" element={<FamilyCostumesPage />} />
+              <Route path="/family/account" element={<FamilyAccountPage />} />
+              <Route path="/performance" element={<PerformanceDashboard />} />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/dancers" element={<DancersPage />} />
               <Route path="/dancers/:id" element={<DancerProfilePage />} />

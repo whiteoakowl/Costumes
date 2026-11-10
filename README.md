@@ -1,6 +1,36 @@
-# Studio Costume Manager
+# Studio Manager (formerly Studio Costume Manager)
 
-A web app for a dance studio to organize, track and plan every costume used in classes, productions, recitals and competitions.
+A dance studio management platform. It started as a costume manager and is growing into an all-in-one system for running a studio: families, staff, classes, the annual calendar, attendance, teacher hours, and every portal's view of them, alongside the original costume, prop and production tools.
+
+## Portals & roles
+
+One central database feeds five portals. **Viewing as** (bottom of the sidebar) switches between accounts to preview each portal.
+
+| Portal | Roles | What they see |
+| --- | --- | --- |
+| Studio Management | Owner / Director | Everything, including Accounts & Access and Settings |
+| Office Portal | Office Administrator, Office Assistant | Day-to-day administration; permissions configurable per account |
+| Teacher Portal | Teacher, Assistant Teacher | Today's classes, their schedule, rosters (with costumes), attendance for their classes, their own hours, announcements and schedule-change notices |
+| Parent Portal | Parent / Guardian, Dancer | Only their own family: dancers, classes, schedule, attendance (read-only), recital costumes and props, notices, contact details and emergency contacts |
+| Performance Portal | Performance Staff | Shows, performance planning, costumes, props, repairs, storage, volunteers and reports, with no family or financial records |
+
+> **Browser-only mode.** Data is stored in the browser on this device, so "Viewing as" is a preview, not a secure login. Real sign-in, invitations, password resets, cross-device access and true privacy between families need a server database (for example Supabase). The data model is already relational with ID links so it can be moved there.
+
+## Studio management (new)
+
+| Section | What you can do |
+| --- | --- |
+| **Accounts & Access** | Create, edit, deactivate, reactivate and delete accounts. Assign roles, link logins to a staff member / parent / dancer, customise each account's permissions, preview any portal with "View as", see recent account activity |
+| **Families** | Family profiles with several parents/guardians (one primary, email/SMS consent), emergency contacts, linked dancers (new or existing), their classes and waiting lists, restricted medical & allergy info, and linked parent logins |
+| **Teachers & Staff** | Separate lists for teachers, assistants, substitutes and other staff. Contact, hire date, styles, qualifications, pay type and rate (pay visible only with payroll permission), assigned classes, next two weeks, class history with attendance status, students |
+| **School Years** | Create, make current, archive (history kept) and copy classes between years. Registration dates, tuition and recital notes, holidays, closures and important dates. Classrooms |
+| **Classes** | Classes by school year with style, level, ages, day, time, room, teacher, assistant, capacity and tuition. Live conflict checks stop double-booking teachers, assistants and rooms; an override is possible but logged. Duplicate. Rosters with enroll, remove, move to another class, automatic waiting list and promote from waiting list. Attendance rate per dancer. Classes with attendance history can't be deleted |
+| **Calendar** | Year, month, week and day views of every class, closure, rehearsal, master class, workshop, important date and performance. Closures automatically cancel classes. Click a class to cancel that date, reschedule it, change its room or assign a substitute. Drag and drop in week view to move one week's class, with conflict checks. Teachers and families automatically get in-app notices |
+| **Attendance** | Present / Absent / Late / Excused / Makeup with notes, per class date. Teachers can edit for 7 days; the office can edit any time. Studio-wide records with filters (class, dancer, teacher, status, date range / month / school year), per-dancer rates and CSV export. Parents see their dancers' history read-only |
+| **Teacher Hours & Payroll** | Fill in class hours from the schedule (substitutes counted separately), teacher-submitted extra, rehearsal and private-lesson hours and corrections, approve and reject (with reason), edit approved hours only with a reason (full audit trail), pay-period navigation, filters, payroll summary and detail CSV exports. Nothing is paid automatically |
+| **Dashboard** | Studio stats (enrolled dancers, families, teachers, assistants, classes, 30-day attendance, upcoming events, hours to approve), today's classes with attendance status, quick actions, announcements and an activity feed, above the existing costume & production overview |
+
+## Costumes & productions
 
 ## What's inside
 
@@ -19,9 +49,16 @@ A web app for a dance studio to organize, track and plan every costume used in c
 | **Photos** | Upload photos (or take one on a phone) for every costume, prop and dancer. Pick a main photo, add captions, view full size. Main photos appear as thumbnails in lists and can be included in printouts |
 | **Settings** | Studio name, costume and prop ID prefixes, dancer levels, size options, volunteer skills, categories, CSV exports, full JSON backup and restore, remove or reload sample data |
 
+## Roadmap (not built yet)
+
+These parts of the full brief are still to come. Several need a server and outside services before they can work for real:
+
+- **Needs a server and/or accounts with outside services:** secure login and invitations; online payments, invoices, refunds and credits (Stripe); email and newsletters (an email provider); SMS alerts (Twilio); private cloud storage for class videos and the media library; ticket sales.
+- **Can be built in the current app:** recitals with class-by-class song, costume and running order; company and competition teams; events with sign-ups; registration and enrollment requests; policies with acknowledgements; fundraisers; costume checkout and return tracking; costume conflict alerts across performances; backstage check-in and quick-change schedules; the website builder; a reports and analytics centre with charts.
+
 ## Data storage
 
-- All data is stored as **relational tables** linked by unique IDs: dancers, categories, costumes and props, accessories / parts, notes, storage locations, shows, performance plans, cast lists, cast memberships, costume and prop assignments, and volunteers. Costumes and props share one inventory table, marked by `kind`. See `src/data/types.ts`.
+- All data is stored as **relational tables** linked by unique IDs: accounts, families, guardians, emergency contacts, staff, school years, classrooms, classes, enrollments, calendar entries, per-date class changes, attendance, time entries (with audit history), notices, announcements, an activity log, dancers, categories, costumes and props, accessories / parts, notes, storage locations, shows, performance plans, cast lists, cast memberships, costume and prop assignments, and volunteers. Costumes and props share one inventory table, marked by `kind`. See `src/data/types.ts`.
 - Every change is **saved automatically** in the browser (localStorage). Data survives refreshes and closing the browser, and stays in sync across open tabs.
 - Deleting a record never leaves broken links. Related assignments are cleaned up, and costumes from a deleted category or location are reassigned (or left unassigned) and the change is logged.
 - Photos are resized automatically and stored in the browser's IndexedDB (much larger than localStorage); their details are in the `photos` table. Backups include photos.

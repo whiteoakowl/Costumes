@@ -25,6 +25,7 @@ import {
 import { accessoriesFor, sortedCategories, sortedLocations, WEEKDAYS } from '../data/selectors';
 import type { AvailabilitySlot, CostumeStatus, ID, ItemKind, ProgressReason } from '../data/types';
 import { itemLabels } from '../lib/labels';
+import { useViewer } from '../lib/session';
 
 interface EditorProps {
   open: boolean;
@@ -33,7 +34,7 @@ interface EditorProps {
   onSaved?: (id: ID) => void;
 }
 
-function FormModal({ open, onClose, title, subtitle, onSubmit, children, saveLabel = 'Save', size = 'md' }: { open: boolean; onClose: () => void; title: string; subtitle?: string; onSubmit: () => void; children: ReactNode; saveLabel?: string; size?: 'sm' | 'md' | 'lg' }) {
+export function FormModal({ open, onClose, title, subtitle, onSubmit, children, saveLabel = 'Save', size = 'md' }: { open: boolean; onClose: () => void; title: string; subtitle?: string; onSubmit: () => void; children: ReactNode; saveLabel?: string; size?: 'sm' | 'md' | 'lg' }) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     onSubmit();
@@ -92,15 +93,36 @@ function SizeInput({ value, onChange, listId }: { value: string; onChange: (v: s
 
 const emptyDancer: DancerInput = { firstName: '', lastName: '', birthday: '', clothingSize: '', costumeSize: '', shoeSize: '', level: '', pointe: false, notes: '' };
 
-export function DancerForm({ open, onClose, id, onSaved }: EditorProps) {
+export function DancerForm({ open, onClose, id, onSaved, defaults }: EditorProps & { defaults?: Partial<DancerInput> }) {
   const db = useDb();
   const run = useRun();
+  const viewer = useViewer();
   const [v, setV] = useState<DancerInput>(emptyDancer);
   useEffect(() => {
     if (!open) return;
     const d = id ? db.dancers.find((x) => x.id === id) : undefined;
-    setV(d ? { firstName: d.firstName, lastName: d.lastName, birthday: d.birthday, clothingSize: d.clothingSize, costumeSize: d.costumeSize, shoeSize: d.shoeSize, level: d.level, pointe: d.pointe, notes: d.notes } : emptyDancer);
+    setV(
+      d
+        ? {
+            firstName: d.firstName,
+            lastName: d.lastName,
+            birthday: d.birthday,
+            clothingSize: d.clothingSize,
+            costumeSize: d.costumeSize,
+            shoeSize: d.shoeSize,
+            level: d.level,
+            pointe: d.pointe,
+            notes: d.notes,
+            familyId: d.familyId ?? null,
+            enrollmentStatus: d.enrollmentStatus ?? 'active',
+            enrollmentDate: d.enrollmentDate ?? '',
+            medicalNotes: d.medicalNotes ?? '',
+            allergies: d.allergies ?? '',
+          }
+        : { ...emptyDancer, familyId: null, enrollmentStatus: 'active', enrollmentDate: todayStr(), medicalNotes: '', allergies: '', ...defaults },
+    );
   }, [open, id]);
+  const familyOptions = [...db.families].sort((a, b) => a.name.localeCompare(b.name)).map((f) => ({ value: f.id, label: f.name }));
   const set = <K extends keyof DancerInput>(k: K, val: DancerInput[K]) => setV((p) => ({ ...p, [k]: val }));
   const submit = () => {
     const saved = run(() => saveDancer(v, id), id ? 'Dancer updated.' : `${v.firstName.trim() || 'Dancer'} added.`);
@@ -149,7 +171,33 @@ export function DancerForm({ open, onClose, id, onSaved }: EditorProps) {
             </button>
           </div>
         </Field>
+        <Field label="Family" hint="Links the dancer to their parents and account">
+          <SearchSelect ariaLabel="Family" value={v.familyId ?? ''} onChange={(x) => set('familyId', x || null)} options={familyOptions} noneLabel="No family yet" />
+        </Field>
+        <Field label="Enrollment status">
+          <select className="input" value={v.enrollmentStatus ?? 'active'} onChange={(e) => set('enrollmentStatus', e.target.value as DancerInput['enrollmentStatus'])}>
+            <option value="active">Active</option>
+            <option value="prospective">Prospective</option>
+            <option value="inactive">Inactive</option>
+            <option value="withdrawn">Withdrawn</option>
+          </select>
+        </Field>
+        <Field label="Enrollment date">
+          <input className="input" type="date" value={v.enrollmentDate ?? ''} onChange={(e) => set('enrollmentDate', e.target.value)} />
+        </Field>
       </div>
+      {viewer.can('medical.view') ? (
+        <div className="grid-2 restricted-box">
+          <Field label="Allergies (restricted)">
+            <input className="input" value={v.allergies ?? ''} onChange={(e) => set('allergies', e.target.value)} />
+          </Field>
+          <Field label="Medical notes (restricted)">
+            <input className="input" value={v.medicalNotes ?? ''} onChange={(e) => set('medicalNotes', e.target.value)} />
+          </Field>
+        </div>
+      ) : (
+        <p className="small faint">Medical and allergy information is only visible to staff with permission.</p>
+      )}
       <Field label="Notes">
         <textarea className="input" rows={3} value={v.notes} onChange={(e) => set('notes', e.target.value)} />
       </Field>

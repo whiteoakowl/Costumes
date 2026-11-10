@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { useNavigate } from 'react-router-dom';
 import { CostumeForm, DancerForm, LocationForm, PerformanceForm, ShowForm, StatusDialog, VolunteerForm } from './forms';
 import { getDb } from '../data/store';
-import type { CostumeInput } from '../data/actions';
+import type { CostumeInput, DancerInput } from '../data/actions';
 import type { CostumeStatus, ID } from '../data/types';
 
 /**
@@ -11,7 +11,7 @@ import type { CostumeStatus, ID } from '../data/types';
  */
 
 type Editor =
-  | { kind: 'dancer'; id?: ID; navigate?: boolean }
+  | { kind: 'dancer'; id?: ID; navigate?: boolean; defaults?: Partial<DancerInput> }
   | { kind: 'costume'; id?: ID; defaults?: Partial<CostumeInput>; navigate?: boolean }
   | { kind: 'location'; id?: ID; navigate?: boolean }
   | { kind: 'show'; id?: ID; navigate?: boolean }
@@ -20,7 +20,7 @@ type Editor =
   | { kind: 'status'; ids: ID[]; status: CostumeStatus };
 
 interface EditorApi {
-  editDancer: (id?: ID, opts?: { navigate?: boolean }) => void;
+  editDancer: (id?: ID, opts?: { navigate?: boolean; defaults?: Partial<DancerInput> }) => void;
   editCostume: (id?: ID, opts?: { defaults?: Partial<CostumeInput>; navigate?: boolean }) => void;
   editLocation: (id?: ID, opts?: { navigate?: boolean }) => void;
   editShow: (id?: ID, opts?: { navigate?: boolean }) => void;
@@ -39,7 +39,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
   const api = useMemo<EditorApi>(
     () => ({
-      editDancer: (id, o) => setEditor({ kind: 'dancer', id, navigate: o?.navigate }),
+      editDancer: (id, o) => setEditor({ kind: 'dancer', id, navigate: o?.navigate, defaults: o?.defaults }),
       editCostume: (id, o) => setEditor({ kind: 'costume', id, defaults: o?.defaults, navigate: o?.navigate }),
       editLocation: (id, o) => setEditor({ kind: 'location', id, navigate: o?.navigate }),
       editShow: (id, o) => setEditor({ kind: 'show', id, navigate: o?.navigate }),
@@ -58,7 +58,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       {children}
-      <DancerForm open={editor?.kind === 'dancer'} id={editor?.kind === 'dancer' ? editor.id : undefined} onClose={close} onSaved={after('/dancers')} />
+      <DancerForm open={editor?.kind === 'dancer'} id={editor?.kind === 'dancer' ? editor.id : undefined} defaults={editor?.kind === 'dancer' ? editor.defaults : undefined} onClose={close} onSaved={after('/dancers')} />
       <CostumeForm
         open={editor?.kind === 'costume'}
         id={editor?.kind === 'costume' ? editor.id : undefined}

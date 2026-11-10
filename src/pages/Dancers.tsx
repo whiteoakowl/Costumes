@@ -10,6 +10,9 @@ import { useEditors } from '../components/editors';
 import { exportDancers } from '../lib/export';
 import { Avatar, PhotoGallery } from '../components/photos';
 import { openPrint } from './Print';
+import { useViewer } from '../lib/session';
+import { attendanceRate, dancerClassIds, staffName } from '../data/studio';
+import { classWhen } from '../components/studioUi';
 import type { Dancer, ID } from '../data/types';
 
 export function DancersPage() {
@@ -252,6 +255,7 @@ export function DancerProfilePage() {
       />
       <div className="detail-grid">
         <div className="stack">
+        <DancerStudioCard dancerId={d.id} />
         <Card title="Dancer Information">
           <dl className="dl">
             <dt>First name</dt>
@@ -412,5 +416,60 @@ export function DancerProfilePage() {
         </div>
       </div>
     </>
+  );
+}
+
+/** Family, enrollment, classes and restricted medical info for a dancer. */
+function DancerStudioCard({ dancerId }: { dancerId: ID }) {
+  const db = useDb();
+  const v = useViewer();
+  const d = db.dancers.find((x) => x.id === dancerId)!;
+  const fam = db.families.find((f) => f.id === d.familyId);
+  const guardians = fam ? db.guardians.filter((g) => g.familyId === fam.id) : [];
+  const classes = dancerClassIds(db, d.id).map((cid) => db.classes.find((c) => c.id === cid)!).filter(Boolean);
+  const waiting = dancerClassIds(db, d.id, 'waitlist').map((cid) => db.classes.find((c) => c.id === cid)!).filter(Boolean);
+  const rate = attendanceRate(db.attendance.filter((a) => a.dancerId === d.id));
+  return (
+    <Card title="Family & Classes">
+      <dl className="dl">
+        <dt>Family</dt>
+        <dd>{fam ? <Link to={`/families/${fam.id}`}>{fam.name}</Link> : <span className="faint">Not linked — edit the dancer to choose a family</span>}</dd>
+        {guardians.length > 0 && (
+          <>
+            <dt>Parents</dt>
+            <dd>
+              {guardians.map((g) => (
+                <div key={g.id} className="small">
+                  {g.firstName} {g.lastName} · {g.phone || g.email}
+                </div>
+              ))}
+            </dd>
+          </>
+        )}
+        <dt>Enrollment</dt>
+        <dd>
+          {(d.enrollmentStatus ?? 'active')[0].toUpperCase() + (d.enrollmentStatus ?? 'active').slice(1)}
+          {d.enrollmentDate && <span className="faint small"> · since {formatDate(d.enrollmentDate)}</span>}
+        </dd>
+        <dt>Classes</dt>
+        <dd>
+          {classes.map((c) => (
+            <div key={c.id} className="small">
+              <Link to={`/classes/${c.id}`}>{c.name}</Link> <span className="faint">· {classWhen(c)} · {staffName(db.staff.find((s) => s.id === c.teacherId))}</span>
+            </div>
+          ))}
+          {waiting.map((c) => (
+            <div key={c.id} className="small faint">
+              Waiting list: {c.name}
+            </div>
+          ))}
+          {!classes.length && !waiting.length && <span className="faint">None</span>}
+        </dd>
+        <dt>Attendance</dt>
+        <dd>{rate === null ? '—' : `${rate}%`}</dd>
+        <dt>Allergies / medical</dt>
+        <dd>{v.can('medical.view') ? [d.allergies, d.medicalNotes].filter(Boolean).join(' · ') || 'None recorded' : <span className="faint">Restricted</span>}</dd>
+      </dl>
+    </Card>
   );
 }

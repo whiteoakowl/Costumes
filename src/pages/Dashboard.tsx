@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { isOpenOrder, workTypeLabels } from '../data/workflow';
 import { WorkOrderDialog, isOverdue } from '../components/work';
+import { StudioOverview } from './StudioOverview';
 import { Link } from 'react-router-dom';
 import { CalendarHeart, CheckCircle2, Clock, Plus, Scissors, Shirt, Sparkles, Theater, Users, Warehouse, Wrench , HandHeart, Wand2} from 'lucide-react';
 import { useDb } from '../data/store';
@@ -44,7 +45,8 @@ export function Dashboard() {
 
   return (
     <>
-      <PageHeader title="Dashboard" subtitle={`Welcome back — here's your costume snapshot for ${today}.`} />
+      <PageHeader title="Dashboard" subtitle={`Welcome back — here's your studio for ${today}.`} />
+      <StudioOverview />
 
       <div className="stats">
         <StatCard label="Dancers" value={db.dancers.length} icon={<Users size={20} />} to="/dancers" tone="rose" />
