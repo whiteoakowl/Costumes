@@ -12,6 +12,7 @@ import {
   Music,
   PackageOpen,
   Printer,
+  Globe,
   Video,
   CalendarX2,
   FolderOpen,
@@ -111,6 +112,7 @@ export const NAV_ITEMS: NavItem[] = [
   // communications
   { to: '/communications', label: 'Communications', icon: Mail, section: 'Communications', show: (v) => (admin(v) || teacher(v)) && v.can('comms.send') },
   { to: '/media', label: 'Media Library', icon: FolderOpen, section: 'Communications', show: (v) => (admin(v) || perf(v)) && v.can('media.manage') },
+  { to: '/website', label: 'Website', icon: Globe, section: 'Communications', show: (v) => admin(v) && v.can('website.edit') },
   { to: '/notifications', label: 'Notifications & Reminders', icon: BellRing, section: 'Communications', show: (v) => admin(v) && v.can('comms.send') },
 
   // money

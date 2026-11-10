@@ -50,7 +50,7 @@ export function newBlock(type: SiteBlockType, over: Partial<SiteBlock> = {}): Si
     portal_login: { heading: 'Parent Portal', text: 'Families can see schedules, attendance, costumes, invoices and more.', buttonLabel: 'Open the Parent Portal', buttonLink: '#/portals' },
     spacer: { padding: 'md' },
     cta: { heading: 'Ready to dance?', text: 'Registration for the new season is open.', buttonLabel: 'Register', buttonLink: '#/site/registration', bg: '#a8676d', color: '#ffffff', align: 'center', padding: 'lg' },
-    registration: { heading: 'Registration', text: 'Register online through the Parent Portal. New families can submit a registration request; the office will confirm your classes.' },
+    registration: { heading: 'Registration', text: 'New families can register online — the office will confirm your classes by email. Current families can register in the Parent Portal.', buttonLabel: 'Register online', buttonLink: '#/register' },
   };
   return {
     id: newId(),

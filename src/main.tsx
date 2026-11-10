@@ -42,6 +42,7 @@ import { ParentEventsPage, ParentFundraisersPage, ParentPoliciesPage, ParentRegi
 import { CommunicationsPage, ComposePage, InboxPage, MessageDetailPage, NotificationsPage } from './pages/Comms';
 import { processScheduled, releasePendingNotifications, runReminders } from './data/commsActions';
 import { ClassVideosPage, MediaLibraryPage, ParentVideosPage, ScheduleRequestsPage, TeacherRequestsPage } from './pages/Media';
+import { PublicSitePage, WebsiteEditorPage, WebsitePage } from './pages/Website';
 import { FinancePage, InvoiceDetailPage, ParentBillingPage } from './pages/Finance';
 import { collectGarbage } from './lib/images';
 import { collectFileGarbage } from './lib/files';
@@ -57,6 +58,8 @@ function App() {
             {/* Printable reports render without the app chrome. */}
             <Route path="/print/:report" element={<PrintPage />} />
             <Route path="/register" element={<PublicRegisterPage />} />
+            <Route path="/site" element={<PublicSitePage />} />
+            <Route path="/site/:slug" element={<PublicSitePage />} />
             <Route path="*" element={<MainApp />} />
           </Routes>
         </EditorProvider>
@@ -133,6 +136,8 @@ function MainApp() {
               <Route path="/teacher/requests" element={<TeacherRequestsPage />} />
               <Route path="/requests" element={<ScheduleRequestsPage />} />
               <Route path="/family/videos" element={<ParentVideosPage />} />
+              <Route path="/website" element={<WebsitePage />} />
+              <Route path="/website/:id" element={<WebsiteEditorPage />} />
               <Route path="/invoices" element={<FinancePage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="/family/billing" element={<ParentBillingPage />} />
