@@ -6,6 +6,7 @@ import { Card, Field, PageHeader } from '../components/ui';
 import { useConfirm, useRun, useToast } from '../components/feedback';
 import { CategoryManager } from './Costumes';
 import { clearImages, importImages } from '../lib/images';
+import { clearFiles, importFiles } from '../lib/files';
 import { exportAllPerformanceAssignments, exportBackup, exportCostumeInventory, exportDancers, exportVolunteers } from '../lib/export';
 import { sortedCategories } from '../data/selectors';
 
@@ -79,6 +80,8 @@ export function SettingsPage() {
       if (!run(() => (restoreBackup(parsed), true))) return;
       try {
         await clearImages();
+        await clearFiles().catch(() => undefined);
+        await importFiles((parsed as { files?: Record<string, string> }).files).catch(() => 0);
         const n = await importImages((parsed as { images?: Record<string, { full: string; thumb: string }> }).images);
         toast.success(`Backup restored${n ? ` with ${n} photo${n === 1 ? '' : 's'}` : ''}.`);
       } catch {
@@ -234,7 +237,7 @@ export function SettingsPage() {
             className="btn btn-danger"
             onClick={async () => {
               if (await confirm({ title: 'Erase ALL data?', message: 'This cannot be undone. Download a backup first if you might need this data again.', confirmLabel: 'Erase everything', danger: true }))
-                if (run(() => (eraseAllData(), true), 'All data erased.')) clearImages().catch(() => undefined);
+                if (run(() => (eraseAllData(), true), 'All data erased.')) { clearImages().catch(() => undefined); clearFiles().catch(() => undefined); }
             }}
           >
             <Trash2 size={16} /> Erase all data

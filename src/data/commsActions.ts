@@ -81,7 +81,7 @@ export function scheduleMessage(id: ID, when: string) {
     validate(m);
     m.status = 'scheduled';
     m.scheduledFor = when;
-    logActivity(db, 'Message scheduled', `${m.subject || 'Text alert'} for ${when.replace('T', ' ')}`, `/communications/${m.id}`);
+    logActivity(db, 'Message scheduled', `${m.subject || 'Text alert'} for ${fmtDate(when.slice(0, 10))} ${fmtClock(when.slice(11, 16))}`, `/communications/${m.id}`);
   });
 }
 
@@ -242,7 +242,7 @@ export function runReminders(): number {
         const dancers = n.teamId ? db.teams.find((t) => t.id === n.teamId)?.dancerIds ?? [] : db.enrollments.filter((e) => e.classId === n.classId && e.status === 'enrolled').map((e) => e.dancerId);
         dancers.forEach((d) => { const f = db.dancers.find((x) => x.id === d)?.familyId; if (f) fams.add(f); });
       }
-      add('recital_reminder', `recital:${r.id}`, `${r.name} is coming up`, `${r.name} — ${fmtDate(r.startDate)} at ${r.venue}. ${r.performanceTimes}`, { familyIds: [...fams], staffIds: db.staff.filter((s) => s.position === 'teacher' || s.position === 'assistant').map((s) => s.id) }, '/family/recitals');
+      add('recital_reminder', `recital:${r.id}`, `${r.name} is coming up`, `${r.name} — ${fmtDate(r.startDate)} at ${r.venue}. ${r.performanceTimes}`, { familyIds: [...fams], staffIds: db.staff.filter((s) => s.position === 'teacher' || s.position === 'assistant').map((s) => s.id) }, '/family/costumes');
     }
     for (const c of db.checkouts) {
       const costume = db.costumes.find((x) => x.id === c.costumeId)?.name ?? 'Costume';
@@ -252,7 +252,7 @@ export function runReminders(): number {
     for (const p of db.performances.filter((x) => upcoming(x.date, rule('call_time')?.daysBefore ?? 1, today))) {
       const casts = db.casts.filter((c) => c.ownerType === 'performance' && c.ownerId === p.id).map((c) => c.id);
       const fams = [...new Set(db.castMembers.filter((m) => casts.includes(m.castId)).map((m) => db.dancers.find((d) => d.id === m.dancerId)?.familyId).filter(Boolean) as ID[])];
-      if (p.callTime) add('call_time', `calltime:${p.id}`, `Call time ${fmtClock(p.callTime)} — ${p.name}`, `${p.name} on ${fmtDate(p.date)}: call time ${fmtClock(p.callTime)} at ${p.venue}.`, { familyIds: fams }, '/family/recitals');
+      if (p.callTime) add('call_time', `calltime:${p.id}`, `Call time ${fmtClock(p.callTime)} — ${p.name}`, `${p.name} on ${fmtDate(p.date)}: call time ${fmtClock(p.callTime)} at ${p.venue}.`, { familyIds: fams }, '/family/costumes');
     }
     for (const p of db.performances.filter((x) => upcoming(x.date, rule('missing_costume')?.daysBefore ?? 14, today))) {
       const r = buildOverview(db, 'performance', p.id).readiness;

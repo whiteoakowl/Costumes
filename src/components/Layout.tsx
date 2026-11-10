@@ -6,6 +6,7 @@ import { countSampleRecords } from '../data/actions';
 import { touchAccount } from '../data/studioActions';
 import { portalLabels, portalOf, roleLabels } from '../data/studio';
 import { setViewer, useViewer } from '../lib/session';
+import { inboxFor, notificationsFor } from '../data/commsActions';
 import { NAV_ITEMS, canVisit, portalHome } from '../lib/nav';
 import { EmptyState } from './ui';
 import type { Role } from '../data/types';
@@ -68,6 +69,9 @@ export function Layout({ children }: { children: ReactNode }) {
   let lastSection: string | undefined;
   const allowed = canVisit(v, location.pathname);
   const isOwner = v.account?.role === 'owner';
+  const who = { familyId: v.familyId, staffId: v.staffId, admin: v.isStaffAdmin };
+  const me = v.account?.id ?? 'anon';
+  const unread = inboxFor(db, who).filter((m) => !m.readBy.includes(me)).length + notificationsFor(db, who).filter((n) => !n.readBy.includes(me)).length;
 
   return (
     <div className={`app portal-${v.portal} ${open ? 'nav-open' : ''}`}>
@@ -102,6 +106,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 <NavLink to={to} end={end} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                   <Icon size={18} />
                   <span>{label}</span>
+                  {to === '/inbox' && unread > 0 && <span className="nav-count" aria-label={`${unread} unread`}>{unread}</span>}
                 </NavLink>
               </div>
             );

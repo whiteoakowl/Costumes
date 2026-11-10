@@ -3,6 +3,7 @@ import { formatDate, accessoriesFor, ageFromBirthday, buildOverview, buildPropOv
 import { progressReasonLabels } from '../data/actions';
 import { todayStr } from '../data/ids';
 import { exportImages } from './images';
+import { exportFiles } from './files';
 
 type Cell = string | number | boolean | null | undefined;
 
@@ -175,7 +176,8 @@ export function exportCastLists(db: Database, ownerType: OwnerType, ownerId: ID,
 /** Full backup: every table plus all photos (as embedded images). */
 export async function exportBackup(db: Database) {
   const images = await exportImages((db.photos ?? []).map((p) => p.id)).catch(() => ({}));
-  const payload = { app: 'Studio Costume Manager', exportedAt: new Date().toISOString(), ...db, images };
+  const { files } = await exportFiles((db.media ?? []).map((m) => m.id)).catch(() => ({ files: {} }));
+  const payload = { app: 'Studio Costume Manager', exportedAt: new Date().toISOString(), ...db, images, files };
   download(`studio-costume-backup-${todayStr()}.json`, JSON.stringify(payload), 'application/json');
   return Object.keys(images).length;
 }

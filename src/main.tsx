@@ -39,6 +39,8 @@ import { PrintPage } from './pages/Print';
 import { CheckoutPage, RecitalDetailPage, RecitalsPage, ShowDayIndexPage, ShowDayPage } from './pages/Productions';
 import { EventDetailPage, EventsPage, FundraiserDetailPage, FundraisersPage, PoliciesPage, PolicyDetailPage, RegistrationsPage, TeamDetailPage, TeamsPage, TicketEventPage, TicketsPage } from './pages/Engagement';
 import { ParentEventsPage, ParentFundraisersPage, ParentPoliciesPage, ParentRegisterPage, ParentTicketsPage, PublicRegisterPage } from './pages/FamilyEngagement';
+import { CommunicationsPage, ComposePage, InboxPage, MessageDetailPage, NotificationsPage } from './pages/Comms';
+import { processScheduled, releasePendingNotifications, runReminders } from './data/commsActions';
 import { FinancePage, InvoiceDetailPage, ParentBillingPage } from './pages/Finance';
 import { collectGarbage } from './lib/images';
 import { getDb } from './data/store';
@@ -118,6 +120,11 @@ function MainApp() {
               <Route path="/family/policies" element={<ParentPoliciesPage />} />
               <Route path="/family/fundraisers" element={<ParentFundraisersPage />} />
               <Route path="/family/tickets" element={<ParentTicketsPage />} />
+              <Route path="/communications" element={<CommunicationsPage />} />
+              <Route path="/communications/compose/:id" element={<ComposePage />} />
+              <Route path="/communications/:id" element={<MessageDetailPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/inbox" element={<InboxPage />} />
               <Route path="/invoices" element={<FinancePage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="/family/billing" element={<ParentBillingPage />} />
@@ -141,6 +148,20 @@ function MainApp() {
           </Layout>
   );
 }
+
+// Background jobs (browser-only: they run while the app is open).
+function backgroundJobs(reminders: boolean) {
+  try {
+    processScheduled();
+    releasePendingNotifications();
+    if (reminders) runReminders();
+  } catch {
+    /* never block the app on housekeeping */
+  }
+}
+setTimeout(() => backgroundJobs(true), 1500);
+setInterval(() => backgroundJobs(false), 60_000);
+setInterval(() => backgroundJobs(true), 15 * 60_000);
 
 // Tidy up stored photo files that no longer belong to any record.
 setTimeout(() => collectGarbage(new Set((getDb().photos ?? []).map((p) => p.id))), 3000);

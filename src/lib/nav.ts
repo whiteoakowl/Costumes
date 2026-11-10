@@ -12,6 +12,9 @@ import {
   Music,
   PackageOpen,
   Printer,
+  Inbox,
+  Mail,
+  BellRing,
   ClipboardSignature,
   FileSignature,
   HandCoins,
@@ -55,6 +58,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/family', label: 'Family Dashboard', icon: Home, end: true, show: parent },
   { to: '/performance', label: 'Performance Dashboard', icon: LayoutDashboard, end: true, show: perf },
 
+  { to: '/inbox', label: 'Inbox', icon: Inbox, show: () => true },
+
   // teacher portal
   { to: '/teacher/schedule', label: 'My Schedule', icon: CalendarDays, section: 'Teaching', show: teacher },
   { to: '/teacher/classes', label: 'My Classes & Rosters', icon: School, section: 'Teaching', show: teacher },
@@ -94,6 +99,10 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/policies', label: 'Policies & Signatures', icon: FileSignature, section: 'Programs', show: (v) => admin(v) && v.can('events.manage') },
   { to: '/fundraisers', label: 'Fundraisers', icon: HandCoins, section: 'Programs', show: (v) => admin(v) && v.can('events.manage') },
   { to: '/tickets', label: 'Ticketing', icon: Ticket, section: 'Programs', show: (v) => (admin(v) || perf(v)) && (v.can('events.manage') || v.can('productions.manage')) },
+
+  // communications
+  { to: '/communications', label: 'Communications', icon: Mail, section: 'Communications', show: (v) => (admin(v) || teacher(v)) && v.can('comms.send') },
+  { to: '/notifications', label: 'Notifications & Reminders', icon: BellRing, section: 'Communications', show: (v) => admin(v) && v.can('comms.send') },
 
   // money
   { to: '/invoices', label: 'Invoices & Payments', icon: Receipt, section: 'Billing', show: (v) => admin(v) && v.can('billing.view') },
