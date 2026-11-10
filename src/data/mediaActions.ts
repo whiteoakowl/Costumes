@@ -2,6 +2,7 @@ import { commit, ValidationError } from './store';
 import { newId, nowIso, todayStr } from './ids';
 import { actorName } from '../lib/session';
 import { logActivity, cancelSession } from './studioActions';
+import { fmtDate } from './time';
 import type { ClassNote, ClassVideo, ID, MediaFile, ScheduleRequest } from './types';
 
 const stamp = () => {
@@ -113,7 +114,7 @@ export function submitScheduleRequest(input: Pick<ScheduleRequest, 'staffId' | '
     find(db.staff, input.staffId, 'Your staff profile');
     const rec: ScheduleRequest = { ...stamp(), ...input, details: input.details.trim(), status: 'pending', response: '', respondedBy: '' };
     db.scheduleRequests.push(rec);
-    logActivity(db, 'Schedule change requested', `${db.staff.find((s) => s.id === input.staffId)?.firstName}: ${input.kind.replace('_', ' ')} ${input.date}`, '/requests');
+    logActivity(db, 'Schedule change requested', `${db.staff.find((s) => s.id === input.staffId)?.firstName}: ${input.kind.replace('_', ' ')} ${fmtDate(input.date)}`, '/requests');
     return rec.id;
   });
 }

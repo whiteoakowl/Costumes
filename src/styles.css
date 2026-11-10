@@ -3362,3 +3362,14 @@ tr.row-warn td { background: #fdf3e6; }
 @media (max-width: 900px) {
   .compose-grid, .inbox-grid { grid-template-columns: 1fr; }
 }
+
+/* ===================================================== media & videos (v5) */
+.dropzone { border: 2px dashed transparent; border-radius: var(--radius); padding: 6px; transition: border-color 0.15s, background 0.15s; }
+.dropzone.over { border-color: var(--rose); background: var(--blush); }
+.chip-x { border: none; background: none; padding: 0 0 0 4px; cursor: pointer; color: var(--muted); display: inline-flex; vertical-align: middle; }
+.video-tile { width: 100%; aspect-ratio: 16 / 9; border: none; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--plum), var(--rose-deep)); color: #fff; display: grid; place-items: center; align-content: center; gap: 4px; cursor: pointer; font: inherit; font-weight: 600; }
+.video-tile:hover { filter: brightness(1.06); }
+.tile-title { font-family: var(--serif); font-size: 20px; margin: 10px 0 2px; font-weight: 600; }
+.video-embed { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: var(--radius-sm); }
+.note-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.note-list li { border-left: 3px solid var(--blush-2); padding: 4px 0 4px 12px; display: grid; gap: 4px; }

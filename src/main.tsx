@@ -41,8 +41,10 @@ import { EventDetailPage, EventsPage, FundraiserDetailPage, FundraisersPage, Pol
 import { ParentEventsPage, ParentFundraisersPage, ParentPoliciesPage, ParentRegisterPage, ParentTicketsPage, PublicRegisterPage } from './pages/FamilyEngagement';
 import { CommunicationsPage, ComposePage, InboxPage, MessageDetailPage, NotificationsPage } from './pages/Comms';
 import { processScheduled, releasePendingNotifications, runReminders } from './data/commsActions';
+import { ClassVideosPage, MediaLibraryPage, ParentVideosPage, ScheduleRequestsPage, TeacherRequestsPage } from './pages/Media';
 import { FinancePage, InvoiceDetailPage, ParentBillingPage } from './pages/Finance';
 import { collectGarbage } from './lib/images';
+import { collectFileGarbage } from './lib/files';
 import { getDb } from './data/store';
 
 function App() {
@@ -125,6 +127,12 @@ function MainApp() {
               <Route path="/communications/:id" element={<MessageDetailPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/inbox" element={<InboxPage />} />
+              <Route path="/media" element={<MediaLibraryPage />} />
+              <Route path="/videos" element={<ClassVideosPage />} />
+              <Route path="/teacher/videos" element={<ClassVideosPage />} />
+              <Route path="/teacher/requests" element={<TeacherRequestsPage />} />
+              <Route path="/requests" element={<ScheduleRequestsPage />} />
+              <Route path="/family/videos" element={<ParentVideosPage />} />
               <Route path="/invoices" element={<FinancePage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="/family/billing" element={<ParentBillingPage />} />
@@ -165,6 +173,7 @@ setInterval(() => backgroundJobs(true), 15 * 60_000);
 
 // Tidy up stored photo files that no longer belong to any record.
 setTimeout(() => collectGarbage(new Set((getDb().photos ?? []).map((p) => p.id))), 3000);
+setTimeout(() => collectFileGarbage(new Set((getDb().media ?? []).map((m) => m.id))), 4000);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -12,6 +12,9 @@ import {
   Music,
   PackageOpen,
   Printer,
+  Video,
+  CalendarX2,
+  FolderOpen,
   Inbox,
   Mail,
   BellRing,
@@ -65,6 +68,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/teacher/classes', label: 'My Classes & Rosters', icon: School, section: 'Teaching', show: teacher },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck, section: 'Teaching', show: (v) => teacher(v) && v.can('attendance.take') },
   { to: '/teacher/hours', label: 'My Hours', icon: Clock, section: 'Teaching', show: teacher },
+  { to: '/teacher/videos', label: 'Class Videos & Notes', icon: Video, section: 'Teaching', show: teacher },
+  { to: '/teacher/requests', label: 'Schedule Requests', icon: CalendarX2, section: 'Teaching', show: teacher },
 
   // parent portal
   { to: '/family/dancers', label: 'My Dancers', icon: UserRound, section: 'My Family', show: parent },
@@ -73,6 +78,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/family/costumes', label: 'Recitals & Costumes', icon: Shirt, section: 'My Family', show: parent },
   { to: '/family/account', label: 'Family Account', icon: Users, section: 'My Family', show: parent },
   { to: '/family/billing', label: 'Invoices & Payments', icon: Receipt, section: 'My Family', show: parent },
+  { to: '/family/videos', label: 'Class Videos & Notes', icon: Video, section: 'My Family', show: parent },
   { to: '/family/events', label: 'Events & Sign-ups', icon: PartyPopper, section: 'Activities', show: parent },
   { to: '/family/register', label: 'Registration', icon: ClipboardSignature, section: 'Activities', show: parent },
   { to: '/family/policies', label: 'Policies & Forms', icon: FileSignature, section: 'Activities', show: parent },
@@ -90,6 +96,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/school-years', label: 'School Years', icon: GraduationCap, section: 'Classes', show: (v) => admin(v) && v.can('classes.view') },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays, section: 'Classes', show: (v) => admin(v) && v.can('classes.view') },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck, section: 'Classes', show: (v) => admin(v) && (v.can('attendance.viewAll') || v.can('attendance.take')) },
+  { to: '/videos', label: 'Class Videos & Notes', icon: Video, section: 'Classes', show: (v) => admin(v) && v.can('classes.view') },
+  { to: '/requests', label: 'Schedule Requests', icon: CalendarX2, section: 'Classes', show: (v) => admin(v) && v.can('calendar.edit') },
   { to: '/hours', label: 'Teacher Hours & Payroll', icon: Clock, section: 'Classes', show: (v) => admin(v) && (v.can('hours.approve') || v.can('payroll.view')) },
 
   // engagement
@@ -102,6 +110,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   // communications
   { to: '/communications', label: 'Communications', icon: Mail, section: 'Communications', show: (v) => (admin(v) || teacher(v)) && v.can('comms.send') },
+  { to: '/media', label: 'Media Library', icon: FolderOpen, section: 'Communications', show: (v) => (admin(v) || perf(v)) && v.can('media.manage') },
   { to: '/notifications', label: 'Notifications & Reminders', icon: BellRing, section: 'Communications', show: (v) => admin(v) && v.can('comms.send') },
 
   // money
