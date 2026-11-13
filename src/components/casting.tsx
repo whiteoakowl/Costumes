@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../lib/router';
 import { AlertTriangle, ArrowRightLeft, CheckCircle2, Copy, Pencil, Plus, Shirt, Trash2, UserMinus, UserPlus, Users, Wand2, X , Printer} from 'lucide-react';
 import { Modal } from './Modal';
 import { Badge, Card, CheckList, EmptyState, Field, ProgressRing, SearchInput, SearchSelect, StatusBadge, type Option } from './ui';
@@ -24,7 +24,7 @@ import {
 import { accessoriesFor, buildOverview, buildPropOverview, itemsOf, byId, castsFor, fullName, issueLabels, ownerCostumeIds, sortedCategories, sortedDancers, type OverviewRow, type Readiness } from '../data/selectors';
 import type { CastList, Database, ID, ItemKind, OwnerType } from '../data/types';
 import { itemLabels } from '../lib/labels';
-import { openPrint } from '../pages/Print';
+import { openPrint } from '../views/Print';
 
 const CAST_SUGGESTIONS: Record<OwnerType, string[]> = {
   show: ['Cast A', 'Cast B', 'Saturday Cast', 'Sunday Cast', 'Understudy Cast', 'Alternate Cast'],

@@ -149,6 +149,8 @@ export const portalHome: Record<Portal, string> = {
 /** Is a path available to this viewer? (Used to guard routes typed into the address bar.) */
 export function canVisit(v: Viewer, path: string): boolean {
   if (path === '/settings') return v.can('settings.edit');
+  // "/" is everyone's way in: it sends each portal to its own home page.
+  if (path === '/') return true;
   const item = [...NAV_ITEMS]
     .sort((a, b) => b.to.length - a.to.length)
     .find((i) => (i.end ? path === i.to : path === i.to || path.startsWith(i.to === '/' ? '/__never' : `${i.to}/`) || path === i.to));

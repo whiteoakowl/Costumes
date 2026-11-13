@@ -207,7 +207,7 @@ export function addSamplePlatform(db: Database): Database {
       { id: newId(), type: 'heading', text: 'Happy holidays from the studio!', url: '', fileId: null },
       { id: newId(), type: 'text', text: 'The Nutcracker is almost here. Tickets are on sale in the Parent Portal.', url: '', fileId: null },
       { id: newId(), type: 'events', text: '', url: '', fileId: null },
-      { id: newId(), type: 'button', text: 'Buy Nutcracker tickets', url: '#/family/tickets', fileId: null },
+      { id: newId(), type: 'button', text: 'Buy Nutcracker tickets', url: '/family/tickets', fileId: null },
     ],
     recipients: [{ kind: 'all_families', ids: [] }],
     deliveries: [],

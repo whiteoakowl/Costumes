@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../lib/router';
 import { CheckCircle2, ChevronDown, ChevronUp, ChevronsUpDown, Search, Sparkles, Wrench } from 'lucide-react';
 import type { Costume } from '../data/types';
 import { progressReasonLabels } from '../data/actions';

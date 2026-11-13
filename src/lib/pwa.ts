@@ -86,20 +86,24 @@ export function initPwa() {
     set({ canPrompt: false, installed: true });
   });
   window.matchMedia?.('(display-mode: standalone)').addEventListener?.('change', () => set({ installed: detectInstalled() }));
+  set({ online: navigator.onLine, installed: detectInstalled(), ios: detectIos() });
   window.addEventListener('online', () => set({ online: true }));
   window.addEventListener('offline', () => set({ online: false }));
 
   // Only in the built app: in development the service worker would keep serving stale files.
-  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+  if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return;
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     // First install takes control silently; later changes mean a new version arrived.
     if (hadController) set({ updateReady: true });
   });
-  window.addEventListener('load', () => {
+  const register = () => {
     navigator.serviceWorker
-      .register('./sw.js', { scope: './' })
+      .register('/sw.js', { scope: '/' })
       .then((reg) => {
+        // Save the files this page already loaded, so the app opens offline next time.
+        const urls = performance.getEntriesByType('resource').map((e) => e.name);
+        navigator.serviceWorker.ready.then((r) => r.active?.postMessage({ type: 'cache-urls', urls })).catch(() => {});
         // Check for a new version whenever the app comes back to the foreground.
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') reg.update().catch(() => {});
@@ -108,5 +112,7 @@ export function initPwa() {
       .catch(() => {
         /* the app still works as a normal website */
       });
-  });
+  };
+  if (document.readyState === 'complete') register();
+  else window.addEventListener('load', register);
 }

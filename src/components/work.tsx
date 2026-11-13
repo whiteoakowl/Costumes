@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../lib/router';
 import { CheckCircle2, Pencil, Play, RotateCcw, X } from 'lucide-react';
 import { Modal } from './Modal';
 import { Badge, CheckList, Field, SearchSelect, type Option } from './ui';

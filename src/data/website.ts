@@ -32,12 +32,12 @@ export const blockLabels: Record<SiteBlockType, string> = {
 
 export function newBlock(type: SiteBlockType, over: Partial<SiteBlock> = {}): SiteBlock {
   const defaults: Partial<Record<SiteBlockType, Partial<SiteBlock>>> = {
-    hero: { heading: 'Welcome to our studio', text: 'Ballet, jazz, tap, contemporary and more for dancers of every age.', buttonLabel: 'Register now', buttonLink: '#/site/registration', bg: '#f7e7e3', padding: 'lg', align: 'center' },
+    hero: { heading: 'Welcome to our studio', text: 'Ballet, jazz, tap, contemporary and more for dancers of every age.', buttonLabel: 'Register now', buttonLink: '/site/registration', bg: '#f7e7e3', padding: 'lg', align: 'center' },
     text: { heading: 'About us', text: 'Tell visitors about your studio.' },
     image: { text: '' },
     gallery: { heading: 'Gallery' },
     video: { heading: 'Watch', videoUrl: '' },
-    button: { buttonLabel: 'Learn more', buttonLink: '#/site/classes', align: 'center' },
+    button: { buttonLabel: 'Learn more', buttonLink: '/site/classes', align: 'center' },
     columns: { heading: 'Why dance with us', columns: [{ heading: 'Caring teachers', text: 'Experienced, certified faculty.' }, { heading: 'Every level', text: 'From first steps to pre-professional.' }, { heading: 'Performances', text: 'Recitals, competitions and community shows.' }] },
     classes: { heading: 'Classes' },
     faculty: { heading: 'Our faculty' },
@@ -47,10 +47,10 @@ export function newBlock(type: SiteBlockType, over: Partial<SiteBlock> = {}): Si
     announcements: { heading: 'News' },
     recitals: { heading: 'Recitals' },
     teams: { heading: 'Competition teams' },
-    portal_login: { heading: 'Parent Portal', text: 'Families can see schedules, attendance, costumes, invoices and more.', buttonLabel: 'Open the Parent Portal', buttonLink: '#/portals' },
+    portal_login: { heading: 'Parent Portal', text: 'Families can see schedules, attendance, costumes, invoices and more.', buttonLabel: 'Open the Parent Portal', buttonLink: '/portals' },
     spacer: { padding: 'md' },
-    cta: { heading: 'Ready to dance?', text: 'Registration for the new season is open.', buttonLabel: 'Register', buttonLink: '#/site/registration', bg: '#a8676d', color: '#ffffff', align: 'center', padding: 'lg' },
-    registration: { heading: 'Registration', text: 'New families can register online — the office will confirm your classes by email. Current families can register in the Parent Portal.', buttonLabel: 'Register online', buttonLink: '#/register' },
+    cta: { heading: 'Ready to dance?', text: 'Registration for the new season is open.', buttonLabel: 'Register', buttonLink: '/site/registration', bg: '#a8676d', color: '#ffffff', align: 'center', padding: 'lg' },
+    registration: { heading: 'Registration', text: 'New families can register online — the office will confirm your classes by email. Current families can register in the Parent Portal.', buttonLabel: 'Register online', buttonLink: '/register' },
   };
   return {
     id: newId(),

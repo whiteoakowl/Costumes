@@ -3558,3 +3558,9 @@ tr.row-warn td { background: #fdf3e6; }
     padding-bottom: max(48px, env(safe-area-inset-bottom));
   }
 }
+
+/* Brief blank screen while the app reads this device's saved data. */
+.app-loading {
+  min-height: 100vh;
+  background: var(--cream);
+}

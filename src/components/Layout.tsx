@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from '../lib/router';
 import { ArrowLeftRight, Eye, Lock, Menu, Settings, Sparkles, X } from 'lucide-react';
 import { useDb } from '../data/store';
 import { countSampleRecords } from '../data/actions';

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../lib/router';
 import { CostumeForm, DancerForm, LocationForm, PerformanceForm, ShowForm, StatusDialog, VolunteerForm } from './forms';
 import { getDb } from '../data/store';
 import type { CostumeInput, DancerInput } from '../data/actions';

@@ -26,7 +26,7 @@ export function InstallAppButton({ compact }: { compact?: boolean }) {
         </button>
       ) : (
         <button className="install-btn" onClick={onClick}>
-          <img src="./icons/icon-192.png" alt="" width={32} height={32} />
+          <img src="/icons/icon-192.png" alt="" width={32} height={32} />
           <span>
             <strong>Install app</strong>
             <span className="install-sub">{pwa.ios ? 'Add to your Home Screen' : 'Opens full-screen, like an app'}</span>
@@ -54,7 +54,7 @@ export function InstallAppButton({ compact }: { compact?: boolean }) {
           </li>
           <li>
             <span className="ios-step-icon">
-              <img src="./icons/apple-touch-icon.png" alt="" width={22} height={22} />
+              <img src="/icons/apple-touch-icon.png" alt="" width={22} height={22} />
             </span>
             <span>
               Tap <strong>Add</strong>. The Dance Studio icon appears on your Home Screen and opens full-screen.

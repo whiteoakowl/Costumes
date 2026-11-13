@@ -1,4 +1,4 @@
-# Studio Manager (formerly Studio Costume Manager)
+# Dance Studio & Costumes (Studio Manager)
 
 A dance studio management platform. It started as a costume manager and is growing into an all-in-one system for running a studio: families, staff, classes, the annual calendar, attendance, teacher hours, and every portal's view of them, alongside the original costume, prop and production tools.
 
@@ -59,7 +59,7 @@ One central database feeds five portals. **Viewing as** (bottom of the sidebar) 
 | **Costume Checkout** | Reserve, check out and return costumes with accessories checklist, condition in/out, missing items, due dates and overdue tracking; returns can open a repair job. Availability for every costume, reserve everything for a performance in one click, and conflict alerts (double-booked across same-day performances, not enough pieces, in repair, checked out elsewhere, accessories short) with recorded overrides |
 | **Teams & Companies** | Rosters, coaches, classes, requirements, rehearsal and competition schedules, fees (invoice the whole team), move dancers between teams, archive |
 | **Events & Sign-ups** | Competitions, workshops, parties, picture day and more with eligibility (all / classes / teams / chosen dancers), deadlines, capacity with automatic waiting list, custom questions, and automatic invoicing. Parents sign up, decline or cancel; the next person on the waiting list moves up |
-| **Registration** | Public online registration form (`#/register`) and parent-portal registration and class changes. Office review approves without creating duplicate families or dancers, enrolls or waitlists, records policy agreements and invoices the registration fee |
+| **Registration** | Public online registration form (`/register`) and parent-portal registration and class changes. Office review approves without creating duplicate families or dancers, enrolls or waitlists, records policy agreements and invoices the registration fee |
 | **Policies & Signatures** | Versioned policies for all families, classes, teams or chosen families; typed e-signatures with name, date/time and version; annual renewal; deadlines; paper signatures recorded by the office; editing the text creates a new version that must be signed again |
 | **Fundraisers** | Donations, product sales and events with goals, progress, per-dancer totals, orders with delivery tracking; family purchases are invoiced or paid online (test mode) |
 | **Ticketing** | Ticket types (general, reserved, VIP, student, complimentary, staff), quantities, sales windows, seating chart with seat selection, online purchases (test mode), box office sales, refunds that release seats, will-call list |
@@ -68,7 +68,7 @@ One central database feeds five portals. **Viewing as** (bottom of the sidebar) 
 | **Media Library** | Upload photos, music, videos, flyers and documents (drag and drop); categories, visibility, descriptions, links to classes/costumes/recitals/families/etc.; previews and downloads. Used by newsletters, class videos, recital music, policies and the website |
 | **Class Videos & Notes** | Teachers upload videos or private YouTube/Vimeo links for their classes (combination, choreography, practice…), choose who can watch, and keep class notes (optionally shared with families). Parents see only their dancers' classes |
 | **Schedule Requests** | Teachers ask to cancel, move or cover a class or take time off; the office approves (cancellations update the calendar and notify families) or declines with a reason |
-| **Website** | Pages from templates (Home, About, Classes, Faculty, Registration, Schedule, Events, Recitals, Teams, Contact, Portal login) built from sections, with drag-and-drop ordering, colours, alignment, spacing, background photos, galleries and video; site fonts, colours, tagline and logo; desktop/tablet/mobile preview; autosaved drafts, preview, publish, unpublish and discard. The public site (`#/site`) pulls classes, schedule, faculty, events and recitals live — never private data |
+| **Website** | Pages from templates (Home, About, Classes, Faculty, Registration, Schedule, Events, Recitals, Teams, Contact, Portal login) built from sections, with drag-and-drop ordering, colours, alignment, spacing, background photos, galleries and video; site fonts, colours, tagline and logo; desktop/tablet/mobile preview; autosaved drafts, preview, publish, unpublish and discard. The public site (`/site`) pulls classes, schedule, faculty, events and recitals live — never private data |
 | **Analytics** | Enrollment by class, age, level and style, class capacity, retention vs. the previous year, attendance by month and class, teacher hours and load, revenue, fundraising, costume availability and usage, event participation and tickets; filter by school year; every chart has a table view and CSV download |
 | **Settings** | Tabs for studio information & logo, billing rules (tuition due day, tax, sibling discount, late fee & grace period, registration fee, payment methods, refund policy, invoice categories), programs & options (dance styles, age groups, accessory types, quick-change threshold), and reminders. Renaming an option updates every record that uses it |
 
@@ -80,7 +80,7 @@ The site is an installable web app (PWA) called **Dance Studio & Costumes**.
 - **iPhone / iPad (Safari):** Apple doesn't allow an install button, so **Install** shows short *Share → Add to Home Screen* steps instead.
 - Once installed (or after one visit), the app opens quickly and keeps working with no signal. A *You're offline* notice appears at the top, and a friendly offline page shows if nothing has been saved yet. When a new version is published, a *Refresh* notice appears.
 
-Files: `public/manifest.webmanifest` (name, icons, colours), `public/icons/` (Android, iPhone and browser-tab icons, drawn from `icon.svg` / `icon-full.svg`), `public/offline.html`, and `pwa/sw.js` (the service worker; the build turns it into `dist/sw.js` with the exact list of app files). `public/_headers` tells Netlify not to cache `sw.js` so updates arrive quickly. The service worker only runs in the built app (`npm run build` then `npm run preview`), not in `npm run dev`. It never caches requests to other sites, such as a database.
+Files: `public/manifest.webmanifest` (name, icons, colours), `public/icons/` (Android, iPhone and browser-tab icons, drawn from `icon.svg` / `icon-full.svg`), `public/offline.html`, and `pwa/sw.js` (the service worker; `npm run build` stamps a new version into `public/sw.js` so every deploy replaces the old saved copy). Screens you've opened before work offline; others show the offline page. `public/_headers` tells Netlify not to cache `sw.js` so updates arrive quickly. The service worker only runs in the built app (`npm run build` then `npm start`), not in `npm run dev`. It never caches requests to other sites, such as a database.
 
 ## Not connected yet (by design)
 
@@ -107,13 +107,19 @@ On first launch the app loads sample families, staff, classes, a recital with a 
 
 ```bash
 npm install
-npm run dev      # local development server
+npm run dev      # local development server at http://localhost:3000
 npm test         # data-layer tests
-npm run build    # production build in dist/
+npm run build    # production build (also writes public/sw.js)
+npm start        # run the production build locally
 ```
 
-The build is a static site, so it can be hosted anywhere. Pushes to `main` are tested, then deployed to GitHub Pages by `.github/workflows/deploy.yml`. In the repository settings, set **Pages → Source** to **GitHub Actions** once.
+**Hosting: Netlify.** Netlify detects Next.js and builds it using `netlify.toml`. GitHub Pages can't run Next.js, so `.github/workflows/ci.yml` now only tests and builds each push and pull request.
 
 ## Tech
 
-React + TypeScript + Vite, React Router (hash routing), lucide icons, and Cormorant Garamond + DM Sans fonts (bundled, so no external font requests).
+Next.js (App Router) + React + TypeScript, lucide icons, and Cormorant Garamond + DM Sans fonts (bundled, so no external font requests).
+
+- `src/app/` — one folder per page address (e.g. `src/app/(app)/dancers/[id]/page.tsx` is `/dancers/<id>`). `(app)` pages get the sidebar and portal checks; `(public)` pages (`/site`, `/register`, `/print/…`) don't.
+- `src/views/` — the screens themselves. Each `page.tsx` just shows one of them.
+- `src/lib/router.tsx` — `Link`, `NavLink`, `useNavigate`, `useParams`, `useSearchParams` on top of Next.js navigation, used by every screen.
+- Data still lives in the browser for now, so screens render in the browser only (`src/app/ClientRoot.tsx`). Old `#/…` links saved in website pages or messages still work.

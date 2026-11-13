@@ -4,3 +4,6 @@ dist
 .DS_Store
 test-results
 *.tsbuildinfo
+.next
+next-env.d.ts
+public/sw.js
