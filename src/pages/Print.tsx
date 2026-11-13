@@ -72,7 +72,7 @@ export function PrintShell({ title, subtitle, children, photos, setPhotos }: { t
   useEffect(() => {
     document.title = `${title} — ${db.settings.studioName}`;
     return () => {
-      document.title = 'Studio Costume Manager';
+      document.title = 'Dance Studio & Costumes';
     };
   }, [title, db.settings.studioName]);
   return (

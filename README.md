@@ -72,6 +72,16 @@ One central database feeds five portals. **Viewing as** (bottom of the sidebar) 
 | **Analytics** | Enrollment by class, age, level and style, class capacity, retention vs. the previous year, attendance by month and class, teacher hours and load, revenue, fundraising, costume availability and usage, event participation and tickets; filter by school year; every chart has a table view and CSV download |
 | **Settings** | Tabs for studio information & logo, billing rules (tuition due day, tax, sibling discount, late fee & grace period, registration fee, payment methods, refund policy, invoice categories), programs & options (dance styles, age groups, accessory types, quick-change threshold), and reminders. Renaming an option updates every record that uses it |
 
+## Install as an app
+
+The site is an installable web app (PWA) called **Dance Studio & Costumes**.
+
+- **Android (Chrome) and computers (Chrome / Edge):** an **Install app** button appears in the menu (and as **Install** in the top bar on phones). One tap installs it with the studio icon, and it opens full-screen without the browser bar.
+- **iPhone / iPad (Safari):** Apple doesn't allow an install button, so **Install** shows short *Share → Add to Home Screen* steps instead.
+- Once installed (or after one visit), the app opens quickly and keeps working with no signal. A *You're offline* notice appears at the top, and a friendly offline page shows if nothing has been saved yet. When a new version is published, a *Refresh* notice appears.
+
+Files: `public/manifest.webmanifest` (name, icons, colours), `public/icons/` (Android, iPhone and browser-tab icons, drawn from `icon.svg` / `icon-full.svg`), `public/offline.html`, and `pwa/sw.js` (the service worker; the build turns it into `dist/sw.js` with the exact list of app files). `public/_headers` tells Netlify not to cache `sw.js` so updates arrive quickly. The service worker only runs in the built app (`npm run build` then `npm run preview`), not in `npm run dev`. It never caches requests to other sites, such as a database.
+
 ## Not connected yet (by design)
 
 - **Logins** are a "Viewing as" preview, not secure sign-in.

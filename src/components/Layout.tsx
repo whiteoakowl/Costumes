@@ -9,6 +9,7 @@ import { setViewer, useViewer } from '../lib/session';
 import { inboxFor, notificationsFor } from '../data/commsActions';
 import { NAV_ITEMS, canVisit, portalHome } from '../lib/nav';
 import { EmptyState } from './ui';
+import { AppStatusBanners, InstallAppButton } from './InstallApp';
 import type { Role } from '../data/types';
 
 const ROLE_ORDER: Role[] = ['owner', 'office_admin', 'office_assistant', 'teacher', 'assistant_teacher', 'performance_staff', 'parent', 'dancer'];
@@ -118,6 +119,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <Sparkles size={14} /> Sample data is loaded. Remove it in Settings when you're ready.
             </NavLink>
           )}
+          <InstallAppButton />
           <ViewAsSelect />
           {v.can('settings.edit') && (
             <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
@@ -134,7 +136,9 @@ export function Layout({ children }: { children: ReactNode }) {
             <Menu size={20} />
           </button>
           <span className="topbar-title">{portalLabels[v.portal]}</span>
+          <InstallAppButton compact />
         </header>
+        <AppStatusBanners />
         {!isOwner && v.account && (
           <div className="preview-banner">
             <Eye size={15} />

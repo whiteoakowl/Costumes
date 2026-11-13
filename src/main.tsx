@@ -48,6 +48,7 @@ import { FinancePage, InvoiceDetailPage, ParentBillingPage } from './pages/Finan
 import { collectGarbage } from './lib/images';
 import { collectFileGarbage } from './lib/files';
 import { getDb } from './data/store';
+import { initPwa } from './lib/pwa';
 
 function App() {
   return (
@@ -181,6 +182,9 @@ setInterval(() => backgroundJobs(true), 15 * 60_000);
 // Tidy up stored photo files that no longer belong to any record.
 setTimeout(() => collectGarbage(new Set((getDb().photos ?? []).map((p) => p.id))), 3000);
 setTimeout(() => collectFileGarbage(new Set((getDb().media ?? []).map((m) => m.id))), 4000);
+
+// Installable app: service worker, install button, offline notice.
+initPwa();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
