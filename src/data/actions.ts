@@ -36,6 +36,7 @@ import {
 import { ensureOwnerAccount } from './studio';
 import { fmtDate, fmtDateTime } from './time';
 import { logActivity } from './studioActions';
+import { prunePlanning } from './planning';
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -152,6 +153,7 @@ export function pruneOrphans(db: Database) {
       }
     }
   }
+  prunePlanning(db);
   db.costumeNotes = db.costumeNotes.filter((n) => costumeIds.has(n.costumeId));
   db.casts = db.casts.filter((c) => ownerExists(c.ownerType, c.ownerId));
   const castIds = new Set(db.casts.map((c) => c.id));

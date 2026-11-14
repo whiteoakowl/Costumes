@@ -2,6 +2,7 @@ import { commit, ValidationError } from './store';
 import { newId, nowIso, todayStr } from './ids';
 import { actorName } from '../lib/session';
 import { logActivity } from './studioActions';
+import { prunePlanning } from './planning';
 import { createInvoiceIn, recordPaymentIn } from './financeActions';
 import { currentVersion, eligibleDancers, eventCounts, round2, takenSeats, ticketsSold } from './platform';
 import { enrolledDancerIds } from './studio';
@@ -85,6 +86,7 @@ export function deleteTeam(id: ID) {
     for (const e of db.signupEvents) e.teamIds = e.teamIds.filter((x) => x !== id);
     for (const p of db.policies) p.teamIds = p.teamIds.filter((x) => x !== id);
     for (const f of db.fundraisers) if (f.teamId === id) f.teamId = null;
+    prunePlanning(db);
     logActivity(db, 'Team deleted', t.name);
   });
 }

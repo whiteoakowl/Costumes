@@ -38,6 +38,7 @@ import { formatLocal } from '../components/work';
 import { toLocalDay } from './Repairs';
 import type { Costume, Database, ID, ItemKind, OwnerType } from '../data/types';
 import { PlatformReport, platformReports, type PlatformReportKey } from './PrintPlatform';
+import { PlanningReport, planningReports, type PlanningReportKey } from './PrintPlanning';
 
 /* -------------------------------------------------------------- opening */
 
@@ -55,7 +56,8 @@ export type ReportKey =
   | 'performance'
   | 'volunteers'
   | 'storage'
-  | PlatformReportKey;
+  | PlatformReportKey
+  | PlanningReportKey;
 
 /** Open a printable report in a new tab (falls back to the same tab if pop-ups are blocked). */
 export function openPrint(report: ReportKey, params: Record<string, string | undefined> = {}) {
@@ -185,6 +187,7 @@ export function PrintPage() {
       return <StorageReport {...props} />;
     default:
       if (platformReports.includes(report as PlatformReportKey)) return <PlatformReport report={report as PlatformReportKey} db={db} p={p} />;
+      if (planningReports.includes(report as PlanningReportKey)) return <PlanningReport report={report as PlanningReportKey} db={db} p={p} />;
       return (
         <PrintShell title="Report not found">
           <Empty>

@@ -36,6 +36,11 @@ import {
   Wand2,
   Warehouse,
   Wrench,
+  Ruler,
+  Camera,
+  ClipboardList,
+  ListChecks,
+  CalendarClock,
   type LucideIcon,
 } from 'lucide-react';
 import type { Portal } from '../data/studio';
@@ -64,6 +69,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/performance', label: 'Performance Dashboard', icon: LayoutDashboard, end: true, show: perf },
 
   { to: '/inbox', label: 'Inbox', icon: Inbox, show: () => true },
+  { to: '/tasks', label: 'Checklists & To-Dos', icon: ListChecks, show: (v) => v.portal !== 'parent' },
 
   // teacher portal
   { to: '/teacher/schedule', label: 'My Schedule', icon: CalendarDays, section: 'Teaching', show: teacher },
@@ -78,6 +84,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/family/schedule', label: 'Class Schedule', icon: CalendarDays, section: 'My Family', show: parent },
   { to: '/family/attendance', label: 'Attendance', icon: ClipboardCheck, section: 'My Family', show: parent },
   { to: '/family/costumes', label: 'Recitals & Costumes', icon: Shirt, section: 'My Family', show: parent },
+  { to: '/family/appointments', label: 'Fittings & Picture Day', icon: CalendarClock, section: 'My Family', show: parent },
   { to: '/family/account', label: 'Family Account', icon: Users, section: 'My Family', show: parent },
   { to: '/family/billing', label: 'Invoices & Payments', icon: Receipt, section: 'My Family', show: parent },
   { to: '/family/videos', label: 'Class Videos & Notes', icon: Video, section: 'My Family', show: parent },
@@ -86,12 +93,14 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/family/policies', label: 'Policies & Forms', icon: FileSignature, section: 'Activities', show: parent },
   { to: '/family/fundraisers', label: 'Fundraisers', icon: HandCoins, section: 'Activities', show: parent },
   { to: '/family/tickets', label: 'Tickets', icon: Ticket, section: 'Activities', show: parent },
+  { to: '/family/volunteer', label: 'Volunteer', icon: HandHeart, section: 'Activities', show: parent },
 
   // people
   { to: '/dancers', label: 'Dancers', icon: Users, section: 'People', show: (v) => admin(v) && v.can('dancers.view') },
   { to: '/families', label: 'Families', icon: UsersRound, section: 'People', show: (v) => admin(v) && v.can('families.view') },
   { to: '/staff', label: 'Teachers & Staff', icon: GraduationCap, section: 'People', show: (v) => admin(v) && v.can('staff.view') },
   { to: '/volunteers', label: 'Volunteers', icon: HandHeart, section: 'People', show: (v) => (admin(v) || perf(v)) && v.can('volunteers.view') },
+  { to: '/volunteer-signups', label: 'Volunteer Sign-ups', icon: ClipboardList, section: 'People', show: (v) => (admin(v) || perf(v)) && v.can('volunteers.view') },
 
   // classes
   { to: '/classes', label: 'Classes', icon: School, section: 'Classes', show: (v) => admin(v) && v.can('classes.view') },
@@ -122,6 +131,7 @@ export const NAV_ITEMS: NavItem[] = [
   // costumes
   { to: '/costumes', label: 'Costumes', icon: Shirt, section: 'Costumes', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('costumes.view') },
   { to: '/props', label: 'Props', icon: Wand2, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.view') },
+  { to: '/fittings', label: 'Costume Fittings', icon: Ruler, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.edit') },
   { to: '/checkout', label: 'Costume Checkout', icon: PackageOpen, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.view') },
   { to: '/repairs', label: 'Repair & Cleaning', icon: Wrench, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.edit') },
   { to: '/storage', label: 'Storage Locations', icon: Warehouse, section: 'Costumes', show: (v) => (admin(v) || perf(v)) && v.can('costumes.view') },
@@ -129,6 +139,7 @@ export const NAV_ITEMS: NavItem[] = [
   // productions
   { to: '/shows', label: 'Shows', icon: Theater, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
   { to: '/recitals', label: 'Recitals', icon: Music, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
+  { to: '/picture-day', label: 'Picture Day', icon: Camera, section: 'Productions', show: (v) => (admin(v) || perf(v)) && (v.can('events.manage') || v.can('productions.manage')) },
   { to: '/show-day', label: 'Show Day & Backstage', icon: ListOrdered, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
   { to: '/performances', label: 'Performance Planning', icon: CalendarHeart, section: 'Productions', show: (v) => (admin(v) || perf(v) || teacher(v)) && v.can('shows.view') },
 

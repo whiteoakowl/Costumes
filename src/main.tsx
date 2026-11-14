@@ -48,6 +48,9 @@ import { FinancePage, InvoiceDetailPage, ParentBillingPage } from './pages/Finan
 import { collectGarbage } from './lib/images';
 import { collectFileGarbage } from './lib/files';
 import { getDb } from './data/store';
+import { ParentAppointmentsPage, ScheduleDetailPage, ScheduleListPage } from './pages/Scheduling';
+import { ParentVolunteerPage, PublicVolunteerPage, VolunteerFormPage, VolunteerSignupsPage } from './pages/VolunteerSignups';
+import { TaskListPage, TasksPage } from './pages/Tasks';
 
 function App() {
   return (
@@ -59,6 +62,7 @@ function App() {
             {/* Printable reports render without the app chrome. */}
             <Route path="/print/:report" element={<PrintPage />} />
             <Route path="/register" element={<PublicRegisterPage />} />
+            <Route path="/volunteer/:id" element={<PublicVolunteerPage />} />
             <Route path="/site" element={<PublicSitePage />} />
             <Route path="/site/:slug" element={<PublicSitePage />} />
             <Route path="*" element={<MainApp />} />
@@ -158,6 +162,16 @@ function MainApp() {
               <Route path="/storage" element={<StoragePage />} />
               <Route path="/storage/:id" element={<StorageDetailPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/fittings" element={<ScheduleListPage key="fitting" kind="fitting" />} />
+              <Route path="/fittings/:id" element={<ScheduleDetailPage key="fitting" kind="fitting" />} />
+              <Route path="/picture-day" element={<ScheduleListPage key="picture_day" kind="picture_day" />} />
+              <Route path="/picture-day/:id" element={<ScheduleDetailPage key="picture_day" kind="picture_day" />} />
+              <Route path="/family/appointments" element={<ParentAppointmentsPage />} />
+              <Route path="/volunteer-signups" element={<VolunteerSignupsPage />} />
+              <Route path="/volunteer-signups/:id" element={<VolunteerFormPage />} />
+              <Route path="/family/volunteer" element={<ParentVolunteerPage />} />
+              <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/tasks/:id" element={<TaskListPage />} />
               <Route path="*" element={<EmptyState title="Page not found" message="Use the menu to find your way back." />} />
             </Routes>
           </Layout>

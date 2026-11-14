@@ -13,6 +13,7 @@ import { WorkOrderTable } from '../components/work';
 import { isOpenOrder } from '../data/workflow';
 import { todayStr } from '../data/ids';
 import type { ID, Volunteer } from '../data/types';
+import { VolunteerShiftsCard } from './VolunteerSignups';
 
 const CONTACT_LABEL = { email: 'Email', phone: 'Phone call', text: 'Text message', '': '' } as const;
 
@@ -308,6 +309,7 @@ export function VolunteerDetailPage() {
               </ul>
             )}
           </Card>
+          <VolunteerShiftsCard volunteerId={v.id} />
           <Card title="Repair & Cleaning Jobs" icon={<Wrench size={18} />} actions={<Link to="/repairs" className="btn btn-ghost btn-sm">All jobs</Link>}>
             <WorkOrderTable orders={db.workOrders.filter((w) => w.volunteerId === v.id && isOpenOrder(w))} showVolunteer={false} empty="No open jobs assigned. Assign repairs and cleaning from the Repair & Cleaning page." />
             {db.workOrders.some((w) => w.volunteerId === v.id && !isOpenOrder(w)) && (

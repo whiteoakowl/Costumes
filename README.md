@@ -72,6 +72,16 @@ One central database feeds five portals. **Viewing as** (bottom of the sidebar) 
 | **Analytics** | Enrollment by class, age, level and style, class capacity, retention vs. the previous year, attendance by month and class, teacher hours and load, revenue, fundraising, costume availability and usage, event participation and tickets; filter by school year; every chart has a table view and CSV download |
 | **Settings** | Tabs for studio information & logo, billing rules (tuition due day, tax, sibling discount, late fee & grace period, registration fee, payment methods, refund policy, invoice categories), programs & options (dance styles, age groups, accessory types, quick-change threshold), and reminders. Renaming an option updates every record that uses it |
 
+## Planning: fittings, picture day, volunteers & checklists
+
+| Section | What you can do |
+| --- | --- |
+| **Costume Fittings** | Fitting days with hours, location, fitters and volunteer helpers, linked to a recital. Link dancers to time slots a few at a time, a whole class or team at once (the roster stays current), or let **Auto-schedule** do it (dancers per slot, minutes each, siblings kept together, "everyone in the recital without a time"). Each dancer shows her size and the costumes to try on; record Fitted / Needs alteration / Refit / No-show with a note, and open an **alteration job** on Repair & Cleaning in one click. Warnings for double-booked dancers, siblings far apart, recital dancers without a time and schedules that run late. Move dancers between times, duplicate a day, print the schedule with check-off boxes |
+| **Picture Day** | The same scheduler for photos: one group time per class or team, then open individual & sibling times. Photographer, instructions (costume, hair & makeup), Photographed / Retake / No-show tracking and printable schedule |
+| **Families** | **Send times to families** publishes the day and sends each family a notice with their dancers' times. In the Parent Portal, **Fittings & Picture Day** lists their times and instructions, and families can book, change or cancel open spots when booking is on |
+| **Volunteer Sign-ups** | Sign-up forms with a list of jobs (date, time, people needed, skill, description), a deadline and one-click "common recital jobs". Families sign up in the Parent Portal (**Volunteer**) or anyone can use the public link (`#/volunteer/<id>`). Sign-ups are matched to existing volunteers by email, or create a new volunteer record. Staff add people (best matches by availability and skill first), set Confirmed / Checked in / No-show, move people between jobs, email everyone signed up, and print a sign-up sheet with blank lines for open spots. Each volunteer's profile lists their sign-ups |
+| **Checklists & To-Dos** | Checklists you reuse (reset, duplicate) and to-do lists with due dates, owners (staff or volunteers), priority and notes. Type or paste several lines to add many items at once; reorder, filter, clear completed, archive and print. **Due soon** and **Assigned to me** views; lists can be office-only or shared with teachers and performance staff |
+
 ## Not connected yet (by design)
 
 - **Logins** are a "Viewing as" preview, not secure sign-in.
@@ -83,7 +93,7 @@ One central database feeds five portals. **Viewing as** (bottom of the sidebar) 
 
 - **Dates and times:** dates are shown as MM/DD/YYYY (e.g. 12/15/1984). Times are New York Eastern time whatever the device's time zone: timestamps are converted and labelled EST/EDT, and "today" is the New York date. Class and event times are entered as studio (Eastern) wall-clock times. See `src/data/time.ts`.
 
-- All data is stored as **relational tables** linked by unique IDs: accounts, families, guardians, emergency contacts, staff, school years, classrooms, classes, enrollments, calendar entries, per-date class changes, attendance, time entries (with audit history), notices, announcements, an activity log, dancers, categories, costumes and props, accessories / parts, notes, storage locations, shows, performance plans, cast lists, cast memberships, costume and prop assignments, and volunteers. Costumes and props share one inventory table, marked by `kind`. See `src/data/types.ts`.
+- All data is stored as **relational tables** linked by unique IDs: accounts, families, guardians, emergency contacts, staff, school years, classrooms, classes, enrollments, calendar entries, per-date class changes, attendance, time entries (with audit history), notices, announcements, an activity log, dancers, categories, costumes and props, accessories / parts, notes, storage locations, shows, performance plans, cast lists, cast memberships, costume and prop assignments, volunteers, fitting & picture-day schedules and time slots, volunteer sign-up forms and sign-ups, and checklists / to-do items. Costumes and props share one inventory table, marked by `kind`. See `src/data/types.ts`.
 - Every change is **saved automatically** in the browser (localStorage). Data survives refreshes and closing the browser, and stays in sync across open tabs.
 - Deleting a record never leaves broken links. Related assignments are cleaned up, and costumes from a deleted category or location are reassigned (or left unassigned) and the change is logged.
 - Photos are resized automatically and stored in the browser's IndexedDB (much larger than localStorage); their details are in the `photos` table. Backups include photos.
@@ -91,7 +101,7 @@ One central database feeds five portals. **Viewing as** (bottom of the sidebar) 
 
 ## Sample data
 
-On first launch the app loads sample families, staff, classes, a recital with a running order, invoices and payments, teams, events, policies, fundraisers, a ticketed show, messages, plus 8 dancers, 12 costumes, 6 props, 4 volunteers, 3 categories, 3 storage locations, 2 shows with cast lists, and a performance plan with costume assignments. Every sample record has a **Sample** tag. **Settings → Remove sample data** deletes it all and keeps anything you entered yourself.
+On first launch the app loads sample families, staff, classes, a recital with a running order, invoices and payments, teams, events, policies, fundraisers, a ticketed show, messages, a fitting day, a picture day, a volunteer sign-up form, checklists and a to-do list, plus 8 dancers, 12 costumes, 6 props, 4 volunteers, 3 categories, 3 storage locations, 2 shows with cast lists, and a performance plan with costume assignments. Every sample record has a **Sample** tag. **Settings → Remove sample data** deletes it all and keeps anything you entered yourself.
 
 ## Running it
 

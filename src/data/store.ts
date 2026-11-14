@@ -4,6 +4,7 @@ import { buildSampleData, addSamplePropsAndVolunteers, addSampleWorkOrders } fro
 import { addSampleStudio } from './sampleStudio';
 import { ensureOwnerAccount } from './studio';
 import { addSamplePlatform } from './samplePlatform';
+import { addSamplePlanning } from './samplePlanning';
 import { ensureWebsite } from './website';
 import { ensureWorkOrders } from './workflow';
 export { newId, nowIso, todayStr } from './ids';
@@ -20,7 +21,7 @@ export { newId, nowIso, todayStr } from './ids';
  */
 
 export const STORAGE_KEY = 'studio-costume-manager/v1';
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export class ValidationError extends Error {}
 
@@ -134,6 +135,12 @@ export function emptyDatabase(): Database {
     classNotes: [],
     scheduleRequests: [],
     sitePages: [],
+    scheduleDays: [],
+    scheduleSlots: [],
+    volunteerForms: [],
+    volunteerShifts: [],
+    taskLists: [],
+    tasks: [],
   };
 }
 
@@ -185,6 +192,8 @@ export function normalizeDatabase(raw: unknown): Database {
     if (db.dancers.some((d) => d.isSample) && !db.invoices.length && !db.recitals.length) addSamplePlatform(db);
     ensureWebsite(db);
   }
+  // Version 6 added fittings, picture day, volunteer sign-ups and checklists.
+  if (fromVersion < 6 && db.dancers.some((d) => d.isSample) && !db.scheduleDays.length && !db.taskLists.length) addSamplePlanning(db);
   db.meta.schemaVersion = SCHEMA_VERSION;
   return db;
 }

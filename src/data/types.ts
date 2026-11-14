@@ -26,6 +26,12 @@
  *   Volunteer       1─* AvailabilitySlot   (embedded list on the volunteer)
  *   Costume/prop    1─* WorkOrder *─1 Volunteer (repairs & cleaning)
  *   Costume/prop/Dancer 1─* Photo           (photo.ownerType + ownerId; bytes in IndexedDB)
+ *
+ * Planning (schema v6)
+ *   ScheduleDay (fitting / picture day) 1─* ScheduleSlot ─* Dancer
+ *       slot.classId / slot.teamId link a whole roster; slot.dancerIds links individual dancers
+ *   VolunteerForm 1─* VolunteerJob (embedded) 1─* VolunteerShift *─1 Volunteer
+ *   TaskList (checklist / to-do list) 1─* TaskItem
  */
 
 export type ID = string;
@@ -553,6 +559,12 @@ export interface Database {
   classNotes: ClassNote[];
   scheduleRequests: ScheduleRequest[];
   sitePages: SitePage[];
+  scheduleDays: ScheduleDay[];
+  scheduleSlots: ScheduleSlot[];
+  volunteerForms: VolunteerForm[];
+  volunteerShifts: VolunteerShift[];
+  taskLists: TaskList[];
+  tasks: TaskItem[];
 }
 
 export type TableName = Exclude<keyof Database, 'meta' | 'settings'>;
@@ -1135,4 +1147,116 @@ export interface SitePage extends Base {
   live: SiteBlock[];
   publishedAt: string;
   description: string;
+}
+
+/* ---- planning: fittings, picture day, volunteer sign-ups, checklists (schema v6) ---- */
+
+export type ScheduleKind = 'fitting' | 'picture_day';
+
+/** A fitting day or a picture day, split into time slots. */
+export interface ScheduleDay extends Base {
+  kind: ScheduleKind;
+  name: string;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:MM
+  endTime: string;
+  slotMinutes: number; // default length of a new slot
+  location: string;
+  recitalId: ID | null;
+  staffIds: ID[]; // fitters / staff on duty
+  volunteerIds: ID[]; // helpers
+  photographer: string;
+  instructions: string; // shown to families: what to bring, hair & makeup…
+  /** Families see their dancers' times in the Parent Portal. */
+  published: boolean;
+  /** Families can book open spots themselves. */
+  familyBooking: boolean;
+  notes: string;
+}
+
+export type SlotOutcome = 'scheduled' | 'done' | 'alteration' | 'retake' | 'no_show';
+
+export interface ScheduleSlot extends Base {
+  dayId: ID;
+  start: string; // HH:MM
+  end: string;
+  label: string;
+  /** Whole class / team booked together (group photo, class fitting). Its roster is always current. */
+  classId: ID | null;
+  teamId: ID | null;
+  /** Dancers linked to this slot individually (in addition to any class / team roster). */
+  dancerIds: ID[];
+  /** Spots families may book themselves (0 = assigned by the studio only). */
+  capacity: number;
+  costumeNote: string;
+  outcomes: Record<ID, { status: SlotOutcome; note: string }>;
+  bookedBy: Record<ID, string>;
+  notes: string;
+}
+
+export interface VolunteerJob {
+  id: ID;
+  title: string;
+  description: string;
+  date: string;
+  start: string;
+  end: string;
+  needed: number; // 0 = as many as possible
+  skill: string;
+}
+
+/** A volunteer sign-up form with a list of jobs. */
+export interface VolunteerForm extends Base {
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  recitalId: ID | null;
+  deadline: string;
+  open: boolean;
+  /** Anyone with the link can sign up (#/volunteer/<id>), not only portal families. */
+  isPublic: boolean;
+  jobs: VolunteerJob[];
+  notes: string;
+}
+
+export type ShiftStatus = 'signed_up' | 'confirmed' | 'checked_in' | 'no_show' | 'cancelled';
+
+export interface VolunteerShift extends Base {
+  formId: ID;
+  jobId: ID;
+  volunteerId: ID;
+  familyId: ID | null;
+  status: ShiftStatus;
+  note: string;
+  by: string;
+}
+
+export type TaskListKind = 'checklist' | 'todo';
+
+export interface TaskList extends Base {
+  name: string;
+  kind: TaskListKind;
+  description: string;
+  dueDate: string;
+  /** 'office' = owner & office only; 'staff' = also teachers and performance staff. */
+  visibility: 'office' | 'staff';
+  recitalId: ID | null;
+  archived: boolean;
+}
+
+export type TaskPriority = 'low' | 'normal' | 'high';
+
+export interface TaskItem extends Base {
+  listId: ID;
+  title: string;
+  notes: string;
+  done: boolean;
+  doneAt: string;
+  doneBy: string;
+  dueDate: string;
+  assigneeStaffId: ID | null;
+  assigneeVolunteerId: ID | null;
+  priority: TaskPriority;
+  order: number;
 }

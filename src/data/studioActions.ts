@@ -1,4 +1,5 @@
 import { commit, ValidationError } from './store';
+import { prunePlanning } from './planning';
 import { newId, nowIso, todayStr } from './ids';
 import { actorName } from '../lib/session';
 import { fmtClock, fmtDate, fmtWeekdayDate } from './time';
@@ -309,6 +310,7 @@ export function deleteStaff(id: ID) {
       a.active = false;
     }
     db.staff = db.staff.filter((x) => x.id !== id);
+    prunePlanning(db);
     logActivity(db, 'Staff deleted', staffName(s));
   });
 }
@@ -464,6 +466,7 @@ export function deleteClass(id: ID) {
     db.sessionChanges = db.sessionChanges.filter((s) => s.classId !== id);
     for (const t of db.timeEntries) if (t.classId === id) t.classId = null;
     for (const n of db.notices) if (n.classId === id) n.classId = null;
+    prunePlanning(db);
     logActivity(db, 'Class deleted', c.name);
   });
 }

@@ -1,4 +1,5 @@
 import { commit, ValidationError } from './store';
+import { prunePlanning } from './planning';
 import { newId, nowIso } from './ids';
 import { actorName } from '../lib/session';
 import { logActivity } from './studioActions';
@@ -53,6 +54,7 @@ export function deleteRecital(id: ID) {
     for (const t of db.ticketEvents) if (t.recitalId === id) t.recitalId = null;
     logActivity(db, 'Recital deleted', r.name);
     db.recitals = db.recitals.filter((x) => x.id !== id);
+    prunePlanning(db);
   });
 }
 
